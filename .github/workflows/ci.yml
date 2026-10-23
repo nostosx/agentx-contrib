@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOWORK: "off"
+  GOTOOLCHAIN: local
+
+defaults:
+  run:
+    shell: bash
+    working-directory: agentx-contrib
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        module: [filestore, middleware, otel, provider, sqlstore]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: agentx-contrib
+      - uses: actions/checkout@v7
+        with:
+          repository: nostosx/agentx
+          path: agentx
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.3"
+          cache: false
+      - run: make check MODULES="${{ matrix.module }}"
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: agentx-contrib
+      - uses: actions/checkout@v7
+        with:
+          repository: nostosx/agentx
+          path: agentx
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.3"
+          cache: false
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          install-mode: goinstall
+          version: v2.15.0
+          install-only: true
+      - run: make lint
+
+  vulncheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: agentx-contrib
+      - uses: actions/checkout@v7
+        with:
+          repository: nostosx/agentx
+          path: agentx
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.3"
+          cache: false
+      - name: Install scanner outside the module
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - run: make vulncheck
+
+  sqlstore-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: agentx
+          POSTGRES_DB: agentx
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: agentx
+          MYSQL_DATABASE: agentx
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pagentx"
+          --health-interval 2s --health-timeout 5s --health-retries 60
+    defaults:
+      run:
+        working-directory: agentx-contrib
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: agentx-contrib
+      - uses: actions/checkout@v7
+        with:
+          repository: nostosx/agentx
+          path: agentx
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: agentx-contrib/sqlstore/go.mod
+          cache-dependency-path: agentx-contrib/sqlstore/go.sum
+      - name: Integration tests
+        env:
+          AGENTX_IT_POSTGRES_DSN: postgres://postgres:agentx@localhost:5432/agentx?sslmode=disable
+          AGENTX_IT_MYSQL_DSN: root:agentx@tcp(localhost:3306)/agentx
+        run: make integration MODULES=sqlstore
