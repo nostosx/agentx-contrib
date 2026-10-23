@@ -2,9 +2,9 @@
 
 Each library module has its own version and tag, `<module>/vA.B.C`.
 Go 1.27.3 is the toolchain requirement, independent of module versions.
-All five modules are preparing their first release as v1.0.0. Their
-module-specific notes are prepared in `CHANGELOG.md`; no module is published
-yet. Record subsequent changes under `Unreleased`, identifying the module.
+Module-specific release notes live in `CHANGELOG.md`. The initial version
+of each module is v1.0.0. Record subsequent changes under `Unreleased`,
+identifying the module.
 Runnable programs are maintained in agentx-examples.
 The library modules require a released agentx, so release
 [agentx first](https://github.com/nostosx/agentx/blob/main/RELEASING.md) and wait
@@ -12,16 +12,16 @@ until that version is available from the Go module proxy.
 
 ## Prepare the modules
 
-1. Start from a clean checkout on `main`, with Go 1.27.3 or later. Run
-   `scripts/use-core-version.sh v1.0.0` after agentx v1.0.0 is published. The
+1. Start from a clean checkout on `main`, with Go 1.27.3 or later. When
+   upgrading the core, run `scripts/use-core-version.sh <released-version>`
+   after the chosen agentx version is available from the public Go proxy. The
    script downloads requested releases before editing any module, removes
    the core replacements, updates the requirements and tidies each module.
    It rejects placeholder and pseudo-versions, invalid versions and major
    versions that need a `/vN` module path. Review all `go.mod` and `go.sum`
    changes; a later tidy or version conflict can still leave partial edits.
-2. Review the selected module's prepared `## <module>/v1.0.0` notes in
-   `CHANGELOG.md` and add its release date when publishing. For later
-   releases, move the module's entries from `Unreleased` into the matching
+2. Review the selected module's notes and release date in `CHANGELOG.md`.
+   Move its entries from `Unreleased` into the matching
    `## <module>/vA.B.C` section.
    Keep a copy of the root MIT `LICENSE` in each module directory, so each
    module contains its own license when archived. Go's
@@ -84,5 +84,5 @@ inspect the existing tag and release before taking further action.
 
 Update the independent [agentx-examples](https://github.com/nostosx/agentx-examples)
 project after the core, provider and filestore versions are available. Its README
-explains how to replace local dependencies with independently released versions.
+records the selected published dependencies and standalone setup.
 The contrib version-switching script only updates this repository's libraries.

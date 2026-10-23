@@ -1,16 +1,18 @@
 # Changelog
 
 Modules are versioned independently with tags of the form `<module>/vX.Y.Z`.
-All five modules are preparing their first release as v1.0.0; none has been
-published yet. Published v1 releases preserve public API compatibility.
-All modules require Go 1.27.3 or later and resolve the published kitx v1.0.0;
-the core dependency still uses a local replacement. See [RELEASING.md](RELEASING.md) for publication gates.
+The initial release of each module is v1.0.0. Published v1 releases preserve
+public API compatibility. Record subsequent changes under `Unreleased`,
+identifying the module.
+
+All modules require Go 1.27.3 or later and use published agentx and kitx
+v1.0.0 without replacements. See [RELEASING.md](RELEASING.md) for release gates.
 
 ## Unreleased
 
 ## provider/v1.0.0
 
-Prepared first release; not yet published.
+Release date: 2026-10-23.
 
 - Add OpenAI Responses and Chat Completions, Anthropic, Gemini and Amazon
   Bedrock adapters, plus OpenAI and Gemini embedders. Adapters call the APIs
@@ -22,7 +24,7 @@ Prepared first release; not yet published.
 
 ## filestore/v1.0.0
 
-Prepared first release; not yet published.
+Release date: 2026-10-23.
 
 - Add JSON-backed sessions, run and workflow checkpoints, memory, vectors and
   MCP OAuth token storage. Reuse kitx atomic writes while preserving private
@@ -33,7 +35,7 @@ Prepared first release; not yet published.
 
 ## sqlstore/v1.0.0
 
-Prepared first release; not yet published.
+Release date: 2026-10-23.
 
 - Add sessions, run and workflow checkpoints and memory on SQLite, PostgreSQL
   and MySQL through `database/sql`, without importing a driver in production.
@@ -42,7 +44,7 @@ Prepared first release; not yet published.
 
 ## middleware/v1.0.0
 
-Prepared first release; not yet published.
+Release date: 2026-10-23.
 
 - Add structured logging for model and tool calls, plus retries for model
   calls and embedders with retry classification, server delay hints and
@@ -50,7 +52,7 @@ Prepared first release; not yet published.
 
 ## otel/v1.0.0
 
-Prepared first release; not yet published.
+Release date: 2026-10-23.
 
 - Add OpenTelemetry tracing, metrics and opt-in GenAI content events for the
   core middleware interfaces.

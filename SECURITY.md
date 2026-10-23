@@ -1,7 +1,9 @@
 # Security policy
 
-agentx-contrib is pre-release. No released version currently has a security
-support commitment. Reports about the current development code are welcome.
+Starting with v1.0.0, security fixes are provided for the latest minor release
+of each module's v1 series. Modules are versioned independently. Upgrade to
+the latest patch release before reporting a vulnerability. Reports about the
+current development code are also welcome.
 
 Use GitHub's **Security → Report a vulnerability** form when private reporting
 is enabled. If it is unavailable, open an issue asking for a private contact

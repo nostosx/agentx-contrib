@@ -14,7 +14,7 @@ framework.
 Each directory is its own module, so a program depends only on what it
 imports.
 
-> Requires Go 1.27.3 or later. These modules are unreleased; API changes are
+> Requires Go 1.27.3 or later. Changes are
 > recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## Modules
@@ -33,11 +33,9 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-All five modules are preparing their first release as v1.0.0. Use the commands
-below after the core and the selected modules have been published. Current checkouts still
-use a placeholder core version and local `replace`; see
-[Development](#development). Go 1.27.3 is the toolchain requirement; each
-module has its own semantic version.
+Each module starts at v1.0.0 and uses the published agentx and kitx v1.0.0
+dependencies. Install only the modules your application needs. Go 1.27.3 is
+the toolchain requirement; module versions are maintained independently.
 
 ```sh
 go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
@@ -48,9 +46,8 @@ go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
 ```
 
 Each module is versioned on its own, with tags of the form
-`<dir>/vX.Y.Z`, such as `provider/v1.0.0`. Until agentx is released, the
-modules build only from a checkout next to agentx; see
-[Development](#development).
+`<dir>/vX.Y.Z`, such as `provider/v1.0.0`. A root tag does not release
+these nested modules.
 
 ## Providers
 
@@ -67,7 +64,7 @@ and structured output; see [Multimodal content](#multimodal-content) for
 media. For request fields specific to one provider, use `agent.WithExtra`.
 
 The providers are tested against local servers that mimic the APIs.
-They have not been verified against live APIs for the planned first release;
+They have not been verified against live APIs for v1.0.0;
 please report a request the API rejects.
 
 ```go
@@ -361,11 +358,9 @@ setup, provider environment variables and commands under `cmd/`.
 
 ## Development
 
-Use Go 1.27.3, GNU Make, Bash and Python 3. The repository root is not a module,
-and no `go.work` is committed. Each module currently requires a placeholder core
-version and uses `replace => ../../agentx`, so check out agentx next to
-agentx-contrib. All modules resolve the published kitx v1.0.0 without a
-sibling kitx checkout. All Make targets set `GOWORK=off`.
+Use Go 1.27.3, GNU Make, Bash and Python 3. Clone this repository on its own;
+agentx and kitx v1.0.0 download through the Go module proxy. The root is not a
+module, and no `go.work` is committed. All Make targets set `GOWORK=off`.
 
 ```sh
 make check        # format, modernizer and tidy checks, vet, build, shuffled race tests

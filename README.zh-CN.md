@@ -10,7 +10,7 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 每个目录都是独立模块，程序只会依赖它导入的部分。
 
-> 需要 Go 1.27.3 或更高版本。各模块尚未发布，API 变更记录在
+> 需要 Go 1.27.3 或更高版本。版本变更记录在
 > [CHANGELOG.md](CHANGELOG.md)。
 
 ## 模块
@@ -28,10 +28,8 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 ## 安装
 
-五个模块的首个正式版本均为 v1.0.0，尚未发布。以下命令在 core 和对应模块发布后使用；
-当前检出仍使用
-占位 core 版本和本地 `replace`，开发环境见[开发](#开发)。Go 1.27.3 是工具链要求，
-各模块的语义版本独立维护。
+各模块从 v1.0.0 开始独立发布，使用已发布的 agentx 和 kitx v1.0.0。
+按应用所需安装对应模块即可。Go 1.27.3 是工具链要求，与模块版本独立。
 
 ```sh
 go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
@@ -42,8 +40,7 @@ go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
 ```
 
 每个模块单独发布版本，标签形如 `<dir>/vX.Y.Z`，例如 `provider/v1.0.0`。
-agentx 首次发布前，这些模块仍使用同级 agentx；kitx 使用已发布的 v1.0.0，
-见[开发](#开发)。
+根目录标签不会发布这些嵌套模块。
 
 ## Provider
 
@@ -59,8 +56,7 @@ agentx 首次发布前，这些模块仍使用同级 agentx；kitx 使用已发�
 [多模态内容](#多模态内容)。某个 Provider 特有的请求字段可以通过
 `agent.WithExtra` 传入。
 
-这些 Provider 是用模拟 API 的本地服务器测试的。准备首次发布时尚未对真实 API
-进行验证；如果 API 拒绝了某个请求，请提交 issue。
+这些 Provider 是用模拟 API 的本地服务器测试的。v1.0.0 尚未验证真实 API 的兼容性；如果 API 拒绝了某个请求，请提交 issue。
 
 ```go
 m, err := anthropic.New() // 读取 ANTHROPIC_API_KEY
@@ -319,8 +315,7 @@ provider 和文件存储模块。目录布局、Provider 环境变量及 `cmd/` 
 ## 开发
 
 使用 Go 1.27.3、GNU Make、Bash 和 Python 3。仓库根目录不是模块，也没有提交 `go.work`。
-当前每个模块都依赖 core 的占位版本并使用 `replace => ../../agentx`，请把 agentx
-与 agentx-contrib 并排检出。kitx 统一使用已发布的 v1.0.0，无需本地检出。
+独立检出本仓库即可，agentx 和 kitx v1.0.0 均由 Go 模块代理下载，无需同级源码。
 所有 Make 入口设置 `GOWORK=off`。
 
 ```sh

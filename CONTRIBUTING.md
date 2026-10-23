@@ -9,7 +9,7 @@ privately (see [SECURITY.md](SECURITY.md)).
 ## Modules
 
 Each top-level directory is a module, `github.com/nostosx/agentx-contrib/<dir>`.
-Modules never import each other. Runnable applications live in the sibling
+Modules never import each other. Runnable applications live in the separate
 [agentx-examples](https://github.com/nostosx/agentx-examples) project, which
 can compose the core and multiple contrib modules. A new library module:
 
@@ -26,10 +26,8 @@ can compose the core and multiple contrib modules. A new library module:
 
 ## Development
 
-Use Go 1.27.3, GNU Make, Bash, Python 3 and a checkout of
-[agentx](https://github.com/nostosx/agentx) next to this one, since the
-modules replace it with `../../agentx` until it is released. kitx v1.0.0
-resolves from the Go module proxy; no sibling kitx checkout is needed. Run Go
+Use Go 1.27.3, GNU Make, Bash and Python 3. A standalone checkout resolves
+agentx and kitx v1.0.0 through the Go module proxy. Run Go
 commands inside a module directory with `GOWORK=off`, or use the `Makefile`, which
 does so for every module. For linting, install golangci-lint v2.15.0 built
 with Go 1.27.3. Install both check tools outside the modules and put the Go
