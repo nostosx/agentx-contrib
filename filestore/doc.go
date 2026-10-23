@@ -14,6 +14,9 @@
 // is atomic on Unix; other platforms follow os.Rename's guarantees. New files
 // use mode 0600 and new directories mode 0700, subject to platform permissions;
 // existing directories retain their permissions. Storage paths must be trusted.
+// Sessions and checkpoints lock each JSON file through a persistent .lock
+// sidecar during reads, replacements and deletes. Keep these sidecars in place;
+// removing one while a store is active can allow conflicting locks.
 //
 // Concurrency guarantees differ by store: MemoryStore coordinates processes,
 // SessionStore serializes saves within one instance, TokenStore serializes

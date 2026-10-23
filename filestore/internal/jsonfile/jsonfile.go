@@ -3,6 +3,7 @@
 package jsonfile
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/nostosx/kitx/atomicfile"
+
+	"github.com/nostosx/agentx-contrib/filestore/internal/filelock"
 )
 
 // WriteFileAtomic writes data to a temporary file in the same directory and
@@ -41,6 +44,9 @@ func WriteJSONFile(path string, v any) error {
 // same file. When the values record their ID (see NewJSONDir), Load and
 // Delete ignore a file holding another ID and Save refuses to replace it,
 // so such IDs are never confused.
+// Each operation holds a persistent sidecar lock, including reads: Windows
+// cannot replace a file while another handle has it open. OS locks also
+// coordinate separate instances and alternate paths to the same directory.
 type JSONDir[T any] struct {
 	dir      string
 	kind     string
@@ -87,11 +93,16 @@ func (d *JSONDir[T]) path(id string) (string, error) {
 }
 
 // Load decodes the value stored under id.
-func (d *JSONDir[T]) Load(id string) (*T, error) {
+func (d *JSONDir[T]) Load(ctx context.Context, id string) (*T, error) {
 	p, err := d.path(id)
 	if err != nil {
 		return nil, err
 	}
+	lock, err := filelock.Acquire(ctx, p+".lock")
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Close()
 	b, err := os.ReadFile(p)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, d.notFound
@@ -133,11 +144,16 @@ func (d *JSONDir[T]) conflictingID(id, path string) string {
 }
 
 // Save stores v under id using WriteJSONFile's replacement guarantees.
-func (d *JSONDir[T]) Save(id string, v *T) error {
+func (d *JSONDir[T]) Save(ctx context.Context, id string, v *T) error {
 	p, err := d.path(id)
 	if err != nil {
 		return err
 	}
+	lock, err := filelock.Acquire(ctx, p+".lock")
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	if conflict := d.conflictingID(id, p); conflict != "" {
 		return fmt.Errorf("%s id %q: the file system does not distinguish it from stored %s %q", d.kind, id, d.kind, conflict)
 	}
@@ -145,11 +161,16 @@ func (d *JSONDir[T]) Save(id string, v *T) error {
 }
 
 // Delete removes the value stored under id. Missing IDs are not an error.
-func (d *JSONDir[T]) Delete(id string) error {
+func (d *JSONDir[T]) Delete(ctx context.Context, id string) error {
 	p, err := d.path(id)
 	if err != nil {
 		return err
 	}
+	lock, err := filelock.Acquire(ctx, p+".lock")
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	if d.conflictingID(id, p) != "" {
 		return nil
 	}

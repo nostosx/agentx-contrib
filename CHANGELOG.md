@@ -32,6 +32,11 @@ Release date: 2026-10-23.
 - Reload memory under a process-shared OS lock on every operation, including
   scoped deletion. Report read errors instead of serving a stale snapshot;
   retain the `.lock` sidecar while stores are active.
+- Coordinate session and checkpoint file reads, replacements and deletes
+  through persistent OS lock sidecars, including across store instances.
+  Honor cancellation while waiting for a file lock and prevent Windows
+  sharing violations during concurrent checkpoint access. Session revision
+  checks remain serialized only within one store instance.
 
 ## sqlstore/v1.0.0
 

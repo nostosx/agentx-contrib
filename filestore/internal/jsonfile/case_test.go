@@ -28,13 +28,13 @@ func TestJSONDirCaseFolding(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "abc.json"), []byte(`{"id":"ABC","value":1}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Load("abc"); !errors.Is(err, notFound) {
+	if _, err := d.Load(t.Context(), "abc"); !errors.Is(err, notFound) {
 		t.Fatalf("Load of a folded ID = %v, want not found", err)
 	}
-	if err := d.Save("abc", &record{ID: "abc", Value: 2}); err == nil {
+	if err := d.Save(t.Context(), "abc", &record{ID: "abc", Value: 2}); err == nil {
 		t.Fatal("Save replaced the value of another ID")
 	}
-	if err := d.Delete("abc"); err != nil {
+	if err := d.Delete(t.Context(), "abc"); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, "abc.json")); err != nil || string(b) != `{"id":"ABC","value":1}` {
@@ -42,25 +42,25 @@ func TestJSONDirCaseFolding(t *testing.T) {
 	}
 	// Values of the same ID, and values that do not record theirs, are
 	// used as before.
-	if err := d.Save("same", &record{ID: "same", Value: 3}); err != nil {
+	if err := d.Save(t.Context(), "same", &record{ID: "same", Value: 3}); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.Save("same", &record{ID: "same", Value: 4}); err != nil {
+	if err := d.Save(t.Context(), "same", &record{ID: "same", Value: 4}); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := d.Load("same"); err != nil || r.Value != 4 {
+	if r, err := d.Load(t.Context(), "same"); err != nil || r.Value != 4 {
 		t.Fatalf("Load = %+v, %v", r, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "legacy.json"), []byte(`{"value":5}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := d.Load("legacy"); err != nil || r.Value != 5 {
+	if r, err := d.Load(t.Context(), "legacy"); err != nil || r.Value != 5 {
 		t.Fatalf("Load of a value without ID = %+v, %v", r, err)
 	}
-	if err := d.Delete("legacy"); err != nil {
+	if err := d.Delete(t.Context(), "legacy"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := d.Load("legacy"); !errors.Is(err, notFound) {
+	if _, err := d.Load(t.Context(), "legacy"); !errors.Is(err, notFound) {
 		t.Fatalf("Load deleted = %v", err)
 	}
 }

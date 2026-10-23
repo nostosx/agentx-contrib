@@ -1,16 +1,88 @@
 package jsonfile_test
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/nostosx/agentx-contrib/filestore/internal/filelock"
 	"github.com/nostosx/agentx-contrib/filestore/internal/jsonfile"
 )
+
+func TestJSONDirOperationsHonorSidecarLock(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	store, err := jsonfile.NewJSONDir[map[string]int](dir, "record", regexp.MustCompile(`^[a-z]+$`), os.ErrNotExist, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := map[string]int{"n": 1}
+	if err := store.Save(t.Context(), "record", &value); err != nil {
+		t.Fatal(err)
+	}
+	lock, err := filelock.Acquire(t.Context(), filepath.Join(dir, "record.json.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	for name, operation := range map[string]func(context.Context) error{
+		"load":   func(ctx context.Context) error { _, err := store.Load(ctx, "record"); return err },
+		"save":   func(ctx context.Context) error { return store.Save(ctx, "record", &value) },
+		"delete": func(ctx context.Context) error { return store.Delete(ctx, "record") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+			defer cancel()
+			if err := operation(ctx); !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("operation bypassed the held lock: %v", err)
+			}
+		})
+	}
+	if err := lock.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.Load(t.Context(), "record"); err != nil || !reflect.DeepEqual(got, &value) {
+		t.Fatalf("canceled operations changed the record: %v, %v", got, err)
+	}
+}
+
+func TestJSONDirConcurrentInstances(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	var wg sync.WaitGroup
+	for range 8 {
+		store, err := jsonfile.NewJSONDir[map[string]int](dir, "record", regexp.MustCompile(`^[a-z]+$`), os.ErrNotExist, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Go(func() {
+			for n := range 20 {
+				value := map[string]int{"first": n, "second": n}
+				if err := store.Save(t.Context(), "shared", &value); err != nil {
+					t.Error(err)
+					return
+				}
+				got, err := store.Load(t.Context(), "shared")
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				if (*got)["first"] != (*got)["second"] {
+					t.Errorf("mixed record: %v", got)
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+}
 
 func TestWriteJSONFile(t *testing.T) {
 	t.Parallel()
@@ -52,14 +124,14 @@ func TestJSONDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Load("missing"); !errors.Is(err, notFound) {
+	if _, err := store.Load(t.Context(), "missing"); !errors.Is(err, notFound) {
 		t.Fatalf("missing error = %v", err)
 	}
 	value := map[string]int{"n": 1}
-	if err := store.Save("a", &value); err != nil {
+	if err := store.Save(t.Context(), "a", &value); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.Load("a")
+	got, err := store.Load(t.Context(), "a")
 	if err != nil || !reflect.DeepEqual(*got, value) {
 		t.Fatalf("record = %v, %v", got, err)
 	}
@@ -74,21 +146,21 @@ func TestJSONDir(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, id string }{{name: "traversal", id: "../escape"}, {name: "empty"}, {name: "dots", id: "..."}} {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := store.Save(tc.id, &value); err == nil {
+			if err := store.Save(t.Context(), tc.id, &value); err == nil {
 				t.Fatal("invalid ID saved")
 			}
-			if _, err := store.Load(tc.id); err == nil {
+			if _, err := store.Load(t.Context(), tc.id); err == nil {
 				t.Fatal("invalid ID loaded")
 			}
-			if err := store.Delete(tc.id); err == nil {
+			if err := store.Delete(t.Context(), tc.id); err == nil {
 				t.Fatal("invalid ID deleted")
 			}
 		})
 	}
-	if err := store.Delete("a"); err != nil {
+	if err := store.Delete(t.Context(), "a"); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Delete("a"); err != nil {
+	if err := store.Delete(t.Context(), "a"); err != nil {
 		t.Fatalf("missing delete = %v", err)
 	}
 }

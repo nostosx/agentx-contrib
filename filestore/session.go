@@ -45,8 +45,8 @@ func Sessions(dir string) (*SessionStore, error) {
 }
 
 // Get implements session.Store.
-func (s *SessionStore) Get(_ context.Context, id string) (session.Session, error) {
-	snap, err := s.dir.Load(id)
+func (s *SessionStore) Get(ctx context.Context, id string) (session.Session, error) {
+	snap, err := s.dir.Load(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +56,12 @@ func (s *SessionStore) Get(_ context.Context, id string) (session.Session, error
 // Save implements session.Store using temporary-file replacement. See
 // SessionStore for revision-check concurrency limits and the package
 // documentation for platform guarantees.
-func (s *SessionStore) Save(_ context.Context, sess session.Session) error {
+func (s *SessionStore) Save(ctx context.Context, sess session.Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	snap := session.TakeSnapshot(sess)
 	var current int64
-	old, err := s.dir.Load(snap.ID)
+	old, err := s.dir.Load(ctx, snap.ID)
 	exists := err == nil
 	switch {
 	case err == nil:
@@ -74,7 +74,7 @@ func (s *SessionStore) Save(_ context.Context, sess session.Session) error {
 	if snap.Revision, err = nextRevision(sess, current, exists); err != nil {
 		return err
 	}
-	if err := s.dir.Save(snap.ID, snap); err != nil {
+	if err := s.dir.Save(ctx, snap.ID, snap); err != nil {
 		return err
 	}
 	session.MarkSaved(sess, snap.Revision)
@@ -99,17 +99,17 @@ func nextRevision(sess session.Session, current int64, exists bool) (int64, erro
 }
 
 // Delete implements session.Store.
-func (s *SessionStore) Delete(_ context.Context, id string) error { return s.dir.Delete(id) }
+func (s *SessionStore) Delete(ctx context.Context, id string) error { return s.dir.Delete(ctx, id) }
 
 // List implements session.Store. Unreadable files are skipped.
-func (s *SessionStore) List(context.Context) ([]session.Info, error) {
+func (s *SessionStore) List(ctx context.Context) ([]session.Info, error) {
 	ids, err := s.dir.IDs()
 	if err != nil {
 		return nil, err
 	}
 	var out []session.Info
 	for _, id := range ids {
-		snap, err := s.dir.Load(id)
+		snap, err := s.dir.Load(ctx, id)
 		if err != nil {
 			continue
 		}

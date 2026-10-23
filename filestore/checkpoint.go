@@ -34,17 +34,19 @@ func Checkpoints(dir string) (*CheckpointStore, error) {
 }
 
 // Save implements loop.Checkpointer.
-func (c *CheckpointStore) Save(_ context.Context, st *loop.State) error {
-	return c.dir.Save(st.RunID, st)
+func (c *CheckpointStore) Save(ctx context.Context, st *loop.State) error {
+	return c.dir.Save(ctx, st.RunID, st)
 }
 
 // Load implements loop.Checkpointer.
-func (c *CheckpointStore) Load(_ context.Context, runID string) (*loop.State, error) {
-	return c.dir.Load(runID)
+func (c *CheckpointStore) Load(ctx context.Context, runID string) (*loop.State, error) {
+	return c.dir.Load(ctx, runID)
 }
 
 // Delete implements loop.Checkpointer.
-func (c *CheckpointStore) Delete(_ context.Context, runID string) error { return c.dir.Delete(runID) }
+func (c *CheckpointStore) Delete(ctx context.Context, runID string) error {
+	return c.dir.Delete(ctx, runID)
+}
 
 // WorkflowCheckpointStore stores each workflow checkpoint as a JSON file in
 // a directory.
@@ -65,18 +67,18 @@ func WorkflowCheckpoints(dir string) (*WorkflowCheckpointStore, error) {
 }
 
 // Save implements workflow.Checkpointer.
-func (c *WorkflowCheckpointStore) Save(_ context.Context, cp *workflow.Checkpoint) error {
-	return c.dir.Save(cp.RunID, cp)
+func (c *WorkflowCheckpointStore) Save(ctx context.Context, cp *workflow.Checkpoint) error {
+	return c.dir.Save(ctx, cp.RunID, cp)
 }
 
 // Load implements workflow.Checkpointer.
-func (c *WorkflowCheckpointStore) Load(_ context.Context, runID string) (*workflow.Checkpoint, error) {
-	return c.dir.Load(runID)
+func (c *WorkflowCheckpointStore) Load(ctx context.Context, runID string) (*workflow.Checkpoint, error) {
+	return c.dir.Load(ctx, runID)
 }
 
 // Delete implements workflow.Checkpointer.
-func (c *WorkflowCheckpointStore) Delete(_ context.Context, runID string) error {
-	return c.dir.Delete(runID)
+func (c *WorkflowCheckpointStore) Delete(ctx context.Context, runID string) error {
+	return c.dir.Delete(ctx, runID)
 }
 
 // IDs returns the run IDs of the stored checkpoints, such as runs to resume
