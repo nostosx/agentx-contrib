@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -15,6 +16,19 @@ ARGS = []
 TEST_NAME = "TestSessionStoreConformance/postgresql"
 
 
+def bash_executable():
+    if os.name != "nt":
+        return "bash"
+    # System32's bash starts WSL; these fixtures require Git for Windows.
+    git = shutil.which("git")
+    if git:
+        for parent in Path(git).resolve().parents:
+            candidate = parent / "bin/bash.exe"
+            if candidate.is_file():
+                return str(candidate)
+    raise RuntimeError("Git Bash is required to test the integration gate")
+
+
 def valid_events():
     return [dict(Action=action, Test=f"{suite}/{backend}")
             for suite in ("TestSessionStoreConformance", "TestCheckpointStoreConformance",
@@ -24,19 +38,19 @@ def valid_events():
 
 class IntegrationGateTest(unittest.TestCase):
     def run_gate(self, events, *, exit_code=0, configured=True):
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(prefix="integration gate ") as directory:
             fake = Path(directory) / "fake-go"
-            fake.write_text('#!/usr/bin/env bash\nprintf \'%s\\n\' "$TEST_EVENTS"\nexit "$TEST_EXIT"\n')
+            fake.write_text('#!/bin/bash\nprintf \'%s\\n\' "$TEST_EVENTS"\nexit "$TEST_EXIT"\n', newline="\n")
             fake.chmod(0o700)
             env = {key: value for key, value in os.environ.items()
                    if not key.startswith(("AGENTX_IT_", "SERVEX_IT_"))}
-            env.update(GO=str(fake), PYTHON=os.sys.executable,
+            env.update(GO=fake.as_posix(), PYTHON=Path(os.sys.executable).as_posix(),
                        TEST_EVENTS="\n".join(json.dumps(event) for event in events),
                        TEST_EXIT=str(exit_code))
             if configured:
                 env.update(CONFIG)
             return subprocess.run(
-                ["bash", str(ROOT / ".github/scripts/integration.sh"), *ARGS],
+                [bash_executable(), (ROOT / ".github/scripts/integration.sh").as_posix(), *ARGS],
                 env=env, text=True, capture_output=True, check=False, timeout=20,
             )
 
