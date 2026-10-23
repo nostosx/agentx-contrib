@@ -1,0 +1,15 @@
+go.work
+go.work.sum
+coverage.txt
+*.test
+*.out
+.DS_Store
+.idea/
+.vscode/
+/coverage.txt
+/bin/
+/dist/
+.env
+.env.*
+!.env.example
+*.prof
