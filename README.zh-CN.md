@@ -31,6 +31,9 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 各模块从 v1.0.0 开始独立发布，使用已发布的 agentx 和 kitx v1.0.0。
 按应用所需安装对应模块即可。Go 1.27.3 是工具链要求，与模块版本独立。
 
+在应用的 Go 模块内执行这些命令。新建应用时，先创建目录并在其中运行
+`go mod init example.com/agentx-app`。本仓库根目录不是可安装的模块。
+
 ```sh
 go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # 文件存储
@@ -41,6 +44,52 @@ go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
 
 每个模块单独发布版本，标签形如 `<dir>/vX.Y.Z`，例如 `provider/v1.0.0`。
 根目录标签不会发布这些嵌套模块。
+
+## 快速开始
+
+这个文件存储示例不需要模型 API 或数据库服务。在新的应用目录里运行
+`go mod init example.com/agentx-files` 和
+`go get github.com/nostosx/agentx-contrib/filestore@v1.0.0`，把下面的程序保存为
+`main.go`，再依次运行 `go mod tidy`、`go run .`：
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/nostosx/agentx-contrib/filestore"
+	"github.com/nostosx/agentx/model"
+	"github.com/nostosx/agentx/session"
+)
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	store, err := filestore.Sessions(".agentx/sessions")
+	if err != nil {
+		log.Fatal(err)
+	}
+	sess := session.New("demo")
+	sess.Append(model.NewMessage(model.RoleUser, model.TextPart("Hello")))
+	if err := store.Save(ctx, sess); err != nil {
+		log.Fatal(err)
+	}
+	saved, err := store.Get(ctx, sess.ID())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(saved.ID(), len(saved.Messages()))
+}
+```
+
+输出为 `demo 1`，会话会保存在 `.agentx/sessions`，退出程序后仍然存在。
+该目录可能包含敏感对话，应保持私有并排除在版本控制之外。下面的功能示例是
+省略 import、复用应用变量的代码片段。完整模型调用示例见
+[agentx 快速开始](https://github.com/nostosx/agentx/blob/main/README.zh-CN.md#快速开始)。
 
 ## Provider
 
@@ -179,18 +228,34 @@ mem := memory.New(store,
 
 ### 文件存储
 
-`filestore` 把状态保存在 JSON 文件中：先写入临时文件再重命名到位，保证原子性，
-文件权限为 0600，新建目录的权限为 0700。它适合单个进程或共享同一目录的少数几个
-进程；多个进程共享的数据库请使用 `sqlstore`。
+`filestore` 把状态保存在 JSON 文件中，通过临时文件重命名替换原文件。
+Unix 上的替换是原子的，其他平台遵循 `os.Rename` 的保证。新建文件的权限为
+0600，新建目录为 0700，具体效果受平台权限模型影响；已有目录保持原权限。
+请使用本地文件系统上的可信路径。各类存储的并发边界不同：
+
+- Session 的修订检查只在一个存储实例内串行执行。复用同一个实例，并在外部协调
+  并发删除。不同实例或进程之间需要外部协调，或改用 `sqlstore`，以避免覆盖更新；
+  文件级锁不会让修订检查成为事务。
+- Session 和检查点的读、替换及删除使用持久化的 `.lock` 锁文件。
+  任何存储仍在使用时都不要删除这些文件。
+- Memory 按下文所述协调跨进程操作。
+- Vector 保留实例内快照，MCP Token 的更新只在单实例内串行执行。
+  每个路径应由一个存储实例管理，避免独立写入者共享。
 
 | 构造函数 | 实现 |
 | --- | --- |
-| `filestore.Sessions(dir)` | `session.Store`；`Save` 能发现并发修改 |
+| `filestore.Sessions(dir)` | `session.Store`；`Save` 在上述协调范围内检测冲突 |
 | `filestore.Checkpoints(dir)` | `loop.Checkpointer` |
 | `filestore.WorkflowCheckpoints(dir)` | `workflow.Checkpointer`；`IDs` 列出已保存的运行 |
 | `filestore.Memory(path)` | `memory.Store` 和 `memory.ScopedDeleter`，保存在一个文件中 |
 | `filestore.Vectors(dir)` | `rag.VectorStore` 和 `rag.Revisioner`，每个来源一个文件，在内存中检索 |
 | `filestore.MCPTokens(path)` | 保存 MCP OAuth 令牌和客户端注册信息的 `mcp.TokenStore` |
+
+Memory 的每次操作都会在进程间共享的 OS 锁内重新读取文件，删除时的作用域检查也
+在锁内进行。使用期间必须保留 `path + ".lock"` 锁文件，所有写入者都应使用
+`filestore.Memory`，并采用支持文件锁和原子替换的本地文件系统。
+锁支持 Linux、macOS、BSD、illumos 和 Windows；其他平台的 Memory 操作会返回
+错误。读取失败时会返回错误，不会使用旧的缓存快照；等待锁时会响应 context 取消。
 
 ```go
 cp, _ := filestore.Checkpoints(".agentx/checkpoints")
@@ -232,7 +297,9 @@ flow := g.MustCompile( // g 是一个 *workflow.Graph
   `VARBINARY`），时间戳为定长 UTC 字符串，向量为小端 float32 二进制。
 - **冲突**：`Save` 只在会话仍是加载时的修订版本时才更新它，跨进程同样
   有效，否则返回 `session.ErrConflict`。
-- **事务**：每次写入都是单条语句；传入 `*sql.Tx` 时，存储会加入调用方的事务。
+- **事务**：存储不会自动开启事务。单条修改语句是原子的，但 `SessionStore.Save`
+  等操作可能执行多条语句。需要这些语句或多次存储操作共享事务时，传入 `*sql.Tx`；
+  提交、回滚和数据库句柄的生命周期由调用方管理。
 - **SQLite**：请设置 busy timeout，例如 `modernc.org/sqlite` 的
   `_pragma=busy_timeout(5000)` DSN 参数，让并发写入者等待。
 

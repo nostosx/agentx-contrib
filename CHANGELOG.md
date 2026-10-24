@@ -10,6 +10,12 @@ v1.0.0 without replacements. See [RELEASING.md](RELEASING.md) for release gates.
 
 ## Unreleased
 
+- Document standalone module installation and a runnable file-store quick start.
+- Clarify filestore revision-check, snapshot and lock-file ownership boundaries
+  when multiple instances or processes access the same paths.
+- Correct sqlstore transaction guidance: store operations can execute multiple
+  statements and join a transaction only when the caller provides one.
+
 ## provider/v1.0.0
 
 Release date: 2026-10-23.

@@ -37,6 +37,10 @@ Each module starts at v1.0.0 and uses the published agentx and kitx v1.0.0
 dependencies. Install only the modules your application needs. Go 1.27.3 is
 the toolchain requirement; module versions are maintained independently.
 
+Run these commands inside your application's Go module. For a new application,
+create a directory and run `go mod init example.com/agentx-app` there first.
+The repository root is not an installable module.
+
 ```sh
 go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # file stores
@@ -48,6 +52,53 @@ go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
 Each module is versioned on its own, with tags of the form
 `<dir>/vX.Y.Z`, such as `provider/v1.0.0`. A root tag does not release
 these nested modules.
+
+## Quick start
+
+This file-store example needs no model API or database server. In a new
+application directory, run `go mod init example.com/agentx-files` and
+`go get github.com/nostosx/agentx-contrib/filestore@v1.0.0`. Save this as
+`main.go`, then run `go mod tidy` followed by `go run .`:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/nostosx/agentx-contrib/filestore"
+	"github.com/nostosx/agentx/model"
+	"github.com/nostosx/agentx/session"
+)
+
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	store, err := filestore.Sessions(".agentx/sessions")
+	if err != nil {
+		log.Fatal(err)
+	}
+	sess := session.New("demo")
+	sess.Append(model.NewMessage(model.RoleUser, model.TextPart("Hello")))
+	if err := store.Save(ctx, sess); err != nil {
+		log.Fatal(err)
+	}
+	saved, err := store.Get(ctx, sess.ID())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(saved.ID(), len(saved.Messages()))
+}
+```
+
+The output is `demo 1`; the session remains in `.agentx/sessions` between
+processes. That directory may contain sensitive conversation data: keep it
+private and out of version control. The feature examples below are fragments
+that omit imports and reuse application values. For a complete model call,
+see the [agentx quick start](https://github.com/nostosx/agentx#quick-start).
 
 ## Providers
 
@@ -203,14 +254,27 @@ mem := memory.New(store,
 
 ### File storage
 
-`filestore` keeps state in JSON files, written atomically through a
-temporary file renamed into place, with mode 0600 in directories created
-with mode 0700. It suits a single process or a few processes sharing a
-directory; use `sqlstore` for a database shared by many.
+`filestore` keeps state in JSON files, replacing each file through a
+temporary file renamed into place. Replacement is atomic on Unix; other
+platforms follow `os.Rename` guarantees. New files use mode 0600 and new
+directories mode 0700, subject to platform permissions; existing directories
+keep their permissions. Use trusted paths on a local filesystem. The stores
+have different concurrency boundaries:
+
+- Sessions serialize revision checks only within one store instance. Reuse
+  that instance, and coordinate concurrent deletes externally. Separate
+  instances and processes need external coordination or `sqlstore` to prevent
+  lost updates; file-level locking does not make revision checks transactional.
+- Session and checkpoint reads, replacements and deletes use persistent
+  `.lock` sidecars. Keep them in place while any store is active.
+- Memory coordinates operations across processes as described below.
+- Vectors keep an instance-local snapshot; MCP tokens serialize updates
+  within one instance. Give each path one store owner rather than sharing it
+  between independent writers.
 
 | Constructor | Implements |
 | --- | --- |
-| `filestore.Sessions(dir)` | `session.Store`; `Save` detects concurrent modification |
+| `filestore.Sessions(dir)` | `session.Store`; `Save` detects conflicts within the coordination limits above |
 | `filestore.Checkpoints(dir)` | `loop.Checkpointer` |
 | `filestore.WorkflowCheckpoints(dir)` | `workflow.Checkpointer`; `IDs` lists the stored runs |
 | `filestore.Memory(path)` | `memory.Store` and `memory.ScopedDeleter`, in one file |
@@ -267,8 +331,11 @@ flow := g.MustCompile( // g is a *workflow.Graph
   strings and embeddings are little-endian float32 blobs.
 - **Conflicts.** `Save` updates a session only at the revision it was
   loaded at, across processes, and otherwise returns `session.ErrConflict`.
-- **Transactions.** Every write is a single statement; given a `*sql.Tx`,
-  the stores take part in the caller's transaction.
+- **Transactions.** Stores do not open transactions. Individual mutating
+  statements are atomic, but an operation such as `SessionStore.Save` can
+  execute several statements. Pass a `*sql.Tx` when those statements or
+  several store operations must share a transaction; the caller owns commit,
+  rollback and the database handle's lifetime.
 - **SQLite.** Set a busy timeout, for example the
   `_pragma=busy_timeout(5000)` DSN parameter of `modernc.org/sqlite`, so
   that concurrent writers wait.
