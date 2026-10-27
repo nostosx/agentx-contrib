@@ -121,7 +121,7 @@ func TestThinkingRequestBody(t *testing.T) {
 		{model: "gemini-3.8-flash", effort: "minimal", want: `{"includeThoughts":true,"thinkingLevel":"low"}`},
 		{model: "gemini-2.5-pro", effort: "none", want: `{"includeThoughts":true,"thinkingBudget":128}`},
 	} {
-		if _, err := m.Generate(t.Context(), &model.Request{Model: tc.model, Messages: []*model.Message{model.UserText("hi")}, Reasoning: &model.Reasoning{Effort: tc.effort}}); err != nil {
+		if _, err := m.Generate(t.Context(), &model.Request{Model: tc.model, Messages: []*model.Message{model.UserText("hi")}, Reasoning: &model.Reasoning{Effort: model.Effort(tc.effort)}}); err != nil {
 			t.Fatal(err)
 		}
 		if got != tc.want {

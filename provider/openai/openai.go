@@ -132,7 +132,7 @@ func WithLegacyMaxTokens() Option { return func(m *Model) { m.legacyMaxTokens = 
 // With a reasoning effort other than none, temperature and top_p are
 // dropped for the OpenAI API and Azure OpenAI, whose reasoning models
 // reject them, and sent to other services, which accept both. Set them
-// through Request.Extra to send them regardless.
+// through Request.ProviderOptions["openai"] to send them regardless.
 func WithChatCompletions() Option { return func(m *Model) { m.chat = true } }
 
 // WithEncryptedReasoning decides whether Responses requests send the

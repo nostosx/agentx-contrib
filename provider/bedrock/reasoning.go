@@ -178,7 +178,7 @@ func claudeReasoning(id string, rs *model.Reasoning, ic *inferenceConfig) map[st
 	thinking := map[string]any(nil)
 	effort := ""
 	if rs != nil && s.known {
-		effort = rs.Effort
+		effort = string(rs.Effort)
 		switch {
 		case effort == "minimal":
 			effort = "low"
@@ -214,7 +214,7 @@ func claudeReasoning(id string, rs *model.Reasoning, ic *inferenceConfig) map[st
 			thinking = map[string]any{"type": "adaptive"}
 		}
 		if thinking != nil && rs.Display != "" && (thinking["type"] == "adaptive" || thinking["type"] == "enabled") {
-			thinking["display"] = rs.Display
+			thinking["display"] = string(rs.Display)
 		}
 	}
 	if !s.effort {

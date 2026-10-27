@@ -120,7 +120,7 @@ func (m *Model) reasoning(r *request, rs *model.Reasoning, replayed bool) bool {
 	s := supportOf(r.Model)
 	var effort string
 	if rs != nil {
-		effort = rs.Effort
+		effort = string(rs.Effort)
 	}
 	if s.known {
 		switch {
@@ -137,9 +137,9 @@ func (m *Model) reasoning(r *request, rs *model.Reasoning, replayed bool) bool {
 	switch {
 	case rs == nil:
 	case !s.known:
-		t = &thinking{Type: "adaptive", Display: rs.Display}
+		t = &thinking{Type: "adaptive", Display: string(rs.Display)}
 		if rs.BudgetTokens > 0 {
-			t = &thinking{Type: "enabled", BudgetTokens: rs.BudgetTokens, Display: rs.Display}
+			t = &thinking{Type: "enabled", BudgetTokens: rs.BudgetTokens, Display: string(rs.Display)}
 		}
 	case effort == "none":
 		effort = ""
@@ -152,12 +152,12 @@ func (m *Model) reasoning(r *request, rs *model.Reasoning, replayed bool) bool {
 			effort = "low"
 		}
 	case s.extended && rs.BudgetTokens > 0:
-		t = &thinking{Type: "enabled", BudgetTokens: rs.BudgetTokens, Display: rs.Display}
+		t = &thinking{Type: "enabled", BudgetTokens: rs.BudgetTokens, Display: string(rs.Display)}
 	case s.adaptive:
-		t = &thinking{Type: "adaptive", Display: rs.Display}
+		t = &thinking{Type: "adaptive", Display: string(rs.Display)}
 	default:
 		if b := derivedBudget(effort, r.MaxTokens); b > 0 {
-			t = &thinking{Type: "enabled", BudgetTokens: b, Display: rs.Display}
+			t = &thinking{Type: "enabled", BudgetTokens: b, Display: string(rs.Display)}
 		}
 	}
 	if s.known && !s.effort {

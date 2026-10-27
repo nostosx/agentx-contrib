@@ -28,6 +28,7 @@ type request struct {
 	MaxTokens           int             `json:"max_tokens,omitempty"`
 	Temperature         *float64        `json:"temperature,omitempty"`
 	TopP                *float64        `json:"top_p,omitempty"`
+	Seed                *int            `json:"seed,omitempty"`
 	Stop                []string        `json:"stop,omitempty"`
 	ReasoningEffort     string          `json:"reasoning_effort,omitempty"`
 	ResponseFormat      *responseFormat `json:"response_format,omitempty"`
@@ -229,6 +230,7 @@ func (m *Model) build(req *model.Request, stream bool) ([]byte, error) {
 		Messages:    msgs,
 		Temperature: req.Temperature,
 		TopP:        req.TopP,
+		Seed:        req.Seed,
 		Stop:        req.Stop,
 	}
 	maxTokens := cmp.Or(req.MaxTokens, m.maxTokens)
@@ -254,7 +256,7 @@ func (m *Model) build(req *model.Request, stream bool) ([]byte, error) {
 		}
 	}
 	if rs := req.Reasoning; rs != nil {
-		r.ReasoningEffort = rs.Effort
+		r.ReasoningEffort = string(rs.Effort)
 		if rs.Effort != "" && rs.Effort != "none" && m.officialAPI() {
 			// As with Responses, OpenAI reasoning models reject sampling
 			// parameters unless reasoning is off. Compatible services,
@@ -271,7 +273,7 @@ func (m *Model) build(req *model.Request, stream bool) ([]byte, error) {
 		r.StreamOptions = &streamOptions{IncludeUsage: true}
 	}
 	m.quirks().apply(&r, req)
-	return utils.EncodeBody(providerName, r, req.Extra)
+	return utils.EncodeBody(providerName, r, req.ProviderOptions[providerName])
 }
 
 // officialAPI reports whether the base URL is OpenAI's API or an Azure

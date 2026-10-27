@@ -250,7 +250,7 @@ func (m *Model) build(req *model.Request, name string, stream bool) ([]byte, err
 			r.GuardrailConfig.StreamProcessingMode = g.StreamProcessingMode
 		}
 	}
-	return utils.EncodeBody(providerName, r, req.Extra)
+	return utils.EncodeBody(providerName, r, req.ProviderOptions[providerName])
 }
 
 // tools returns the tool configuration of req.

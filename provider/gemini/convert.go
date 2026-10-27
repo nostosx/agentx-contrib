@@ -137,6 +137,7 @@ type generationConfig struct {
 	MaxOutputTokens    int             `json:"maxOutputTokens,omitempty"`
 	Temperature        *float64        `json:"temperature,omitempty"`
 	TopP               *float64        `json:"topP,omitempty"`
+	Seed               *int            `json:"seed,omitempty"`
 	StopSequences      []string        `json:"stopSequences,omitempty"`
 	ResponseMIMEType   string          `json:"responseMimeType,omitempty"`
 	ResponseJSONSchema json.RawMessage `json:"responseJsonSchema,omitempty"`
@@ -204,6 +205,7 @@ func (m *Model) build(req *model.Request) ([]byte, string, error) {
 		MaxOutputTokens: cmp.Or(req.MaxTokens, m.maxTokens),
 		Temperature:     req.Temperature,
 		TopP:            req.TopP,
+		Seed:            req.Seed,
 		StopSequences:   req.Stop,
 	}
 	if f := req.ResponseFormat; f != nil {
@@ -227,7 +229,7 @@ func (m *Model) build(req *model.Request) ([]byte, string, error) {
 		gc.ThinkingConfig = tc
 	}
 	r.GenerationConfig = gc
-	body, err := utils.EncodeBody(providerName, r, req.Extra)
+	body, err := utils.EncodeBody(providerName, r, req.ProviderOptions[providerName])
 	return body, name, err
 }
 
@@ -236,8 +238,8 @@ func (m *Model) build(req *model.Request) ([]byte, string, error) {
 // an effort is mapped to a budget for them and to a level for later models.
 // See https://ai.google.dev/gemini-api/docs/generate-content/thinking.
 func thinking(rs *model.Reasoning, name string) (*thinkingConfig, error) {
-	tc := &thinkingConfig{IncludeThoughts: rs.Display != "omitted"}
-	effort := strings.ToLower(rs.Effort)
+	tc := &thinkingConfig{IncludeThoughts: rs.Display != model.DisplayOmitted}
+	effort := strings.ToLower(string(rs.Effort))
 	switch {
 	case rs.BudgetTokens != 0:
 		tc.ThinkingBudget = new(clampBudget(name, rs.BudgetTokens))
@@ -245,13 +247,13 @@ func thinking(rs *model.Reasoning, name string) (*thinkingConfig, error) {
 	case usesBudget(name):
 		b, ok := effortBudgets[effort]
 		if !ok {
-			return nil, unknownEffort(rs.Effort)
+			return nil, unknownEffort(string(rs.Effort))
 		}
 		tc.ThinkingBudget = new(clampBudget(name, b))
 	default:
 		level, ok := effortLevels[effort]
 		if !ok {
-			return nil, unknownEffort(rs.Effort)
+			return nil, unknownEffort(string(rs.Effort))
 		}
 		tc.ThinkingLevel = nearestLevel(name, level)
 	}
@@ -593,7 +595,7 @@ func (c *converter) mediaPart(p model.Part) (part, error) {
 	}
 	if d := strings.ToLower(p.Detail); d != "" && d != "auto" {
 		if !c.gemini3 {
-			return part{}, model.Permanent(errors.New("gemini: per-part media resolution (Part.Detail) needs Gemini 3 or later; set generationConfig.mediaResolution through Request.Extra"))
+			return part{}, model.Permanent(errors.New("gemini: per-part media resolution (Part.Detail) needs Gemini 3 or later; set generationConfig.mediaResolution through Request.ProviderOptions[\"gemini\"]"))
 		}
 		out.MediaResolution = &mediaResolution{Level: "MEDIA_RESOLUTION_" + strings.ToUpper(d)}
 	}

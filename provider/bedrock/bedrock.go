@@ -35,7 +35,8 @@
 // ToolChoiceNone, or without tools, no toolConfig is sent and earlier tool
 // calls and results are sent as text.
 //
-// Request.Extra is merged into the Converse request body, so use
+// Request.ProviderOptions["bedrock"] is merged into the Converse request
+// body, so use
 // "additionalModelRequestFields" for model parameters; it replaces the
 // fields the provider generates, such as Claude's thinking settings.
 //

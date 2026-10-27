@@ -48,12 +48,12 @@ func TestBuildResponses(t *testing.T) {
 			),
 			model.ToolResults(&model.ToolResult{CallID: "call_1", Content: "boom", IsError: true}),
 		},
-		Tools:          []*model.ToolSpec{{Name: "lookup", Parameters: json.RawMessage(`{"type":"object"}`)}},
-		ToolChoice:     &model.ToolChoice{Mode: model.ToolChoiceTool, Name: "lookup"},
-		Temperature:    &temp,
-		Reasoning:      &model.Reasoning{Effort: "high"},
-		ResponseFormat: &model.ResponseFormat{Schema: json.RawMessage(`{"type":"object"}`), Strict: true},
-		Extra:          map[string]any{"parallel_tool_calls": false},
+		Tools:           []*model.ToolSpec{{Name: "lookup", Parameters: json.RawMessage(`{"type":"object"}`)}},
+		ToolChoice:      &model.ToolChoice{Mode: model.ToolChoiceTool, Name: "lookup"},
+		Temperature:     &temp,
+		Reasoning:       &model.Reasoning{Effort: "high"},
+		ResponseFormat:  &model.ResponseFormat{Schema: json.RawMessage(`{"type":"object"}`), Strict: true},
+		ProviderOptions: map[string]map[string]any{"openai": {"parallel_tool_calls": false}},
 	}
 	body, err := m.buildResponses(req, true)
 	if err != nil {
@@ -154,7 +154,7 @@ func TestResponsesInclude(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			req := &model.Request{Model: tc.model, Reasoning: tc.reasoning, Extra: tc.extra}
+			req := &model.Request{Model: tc.model, Reasoning: tc.reasoning, ProviderOptions: map[string]map[string]any{"openai": tc.extra}}
 			extra := maps.Clone(tc.extra)
 			body, err := m.buildResponses(req, false)
 			if err != nil {
@@ -164,8 +164,8 @@ func TestResponsesInclude(t *testing.T) {
 			if (tc.want == nil && ok) || (tc.want != nil && !reflect.DeepEqual(got, tc.want)) {
 				t.Fatalf("include = %v, want %v", got, tc.want)
 			}
-			if !reflect.DeepEqual(req.Extra, extra) {
-				t.Errorf("request Extra modified: %v", req.Extra)
+			if !reflect.DeepEqual(req.ProviderOptions["openai"], extra) {
+				t.Errorf("request provider options modified: %v", req.ProviderOptions)
 			}
 		})
 	}

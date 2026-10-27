@@ -39,7 +39,8 @@ type responsesRequest struct {
 	// Store is false and the conversation is sent with every request;
 	// this adapter does not use server-side conversation state.
 	Store bool `json:"store"`
-	// Include is sent only when Extra or WithEncryptedReasoning sets it.
+	// Include is sent only when the provider options or
+	// WithEncryptedReasoning set it.
 	// Stateless requests return reasoning items with encrypted_content by
 	// default.
 	Include []string `json:"include,omitempty"`
@@ -202,7 +203,7 @@ func (m *Model) buildResponses(req *model.Request, stream bool) ([]byte, error) 
 		TopP:            req.TopP,
 		Stream:          stream,
 	}
-	extra := req.Extra
+	extra := req.ProviderOptions[providerName]
 	r.Include, extra = m.include(extra)
 	if r.Input == nil {
 		r.Input = []json.RawMessage{}
@@ -223,8 +224,8 @@ func (m *Model) buildResponses(req *model.Request, stream bool) ([]byte, error) 
 		}
 	}
 	if rs := req.Reasoning; rs != nil {
-		r.Reasoning = &responsesReasoning{Effort: rs.Effort}
-		if rs.Display != "omitted" {
+		r.Reasoning = &responsesReasoning{Effort: string(rs.Effort)}
+		if rs.Display != model.DisplayOmitted {
 			r.Reasoning.Summary = "auto"
 		}
 		if rs.Effort != "" && rs.Effort != "none" {
@@ -239,10 +240,10 @@ func (m *Model) buildResponses(req *model.Request, stream bool) ([]byte, error) 
 	return utils.EncodeBody(providerName, r, extra)
 }
 
-// include returns the include list and the Extra fields to send. With
+// include returns the include list and the provider options to send. With
 // WithEncryptedReasoning(true), encrypted reasoning is added to an include
-// list from Extra rather than replaced by it; an Extra include set to nil
-// removes the field.
+// list from the options rather than replaced by it; an include option set
+// to nil removes the field.
 func (m *Model) include(extra map[string]any) ([]string, map[string]any) {
 	var include []string
 	if v, ok := extra["include"]; ok {
@@ -261,7 +262,7 @@ func (m *Model) include(extra map[string]any) ([]string, map[string]any) {
 	return include, extra
 }
 
-// stringList converts an Extra value holding a list of strings.
+// stringList converts a provider option holding a list of strings.
 func stringList(v any) ([]string, bool) {
 	switch v := v.(type) {
 	case []string:
@@ -540,7 +541,8 @@ func convertItem(raw json.RawMessage) (p model.Part, refused bool, err error) {
 	case "reasoning":
 		return model.Part{Type: model.PartReasoning, Text: summaryText(it), Provider: providerName, Raw: slices.Clone(raw)}, false, nil
 	}
-	// Other items, such as hosted tool calls requested through Extra, are
+	// Other items, such as hosted tool calls requested through the provider
+	// options, are
 	// kept so they can be sent back.
 	return model.Part{Type: model.PartRaw, Provider: providerName, Raw: slices.Clone(raw)}, false, nil
 }

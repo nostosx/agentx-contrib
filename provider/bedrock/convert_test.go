@@ -216,7 +216,7 @@ func TestBuildOptionsAndExtra(t *testing.T) {
 		Messages:    []*model.Message{model.UserText("q")},
 		Tools:       []*model.ToolSpec{{Name: "f"}},
 		Temperature: &temp, TopP: &topP, Stop: []string{"END"},
-		Extra: map[string]any{"requestMetadata": map[string]string{"team": "a"}, "additionalModelRequestFields": map[string]int{"top_k": 5}},
+		ProviderOptions: map[string]map[string]any{"bedrock": {"requestMetadata": map[string]string{"team": "a"}, "additionalModelRequestFields": map[string]int{"top_k": 5}}},
 	}
 	got := buildJSON(t, m, req, "meta.llama3-3-70b-instruct-v1:0", false)
 	for field, want := range map[string]string{

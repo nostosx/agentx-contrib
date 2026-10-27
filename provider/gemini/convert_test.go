@@ -337,3 +337,28 @@ func mustConvert(t *testing.T, msgs []*model.Message) []content {
 	}
 	return out
 }
+
+// The portable seed goes into generationConfig; the options of other
+// providers stay out of the body.
+func TestBuildSeedAndProviderOptions(t *testing.T) {
+	t.Parallel()
+	m, err := New(WithAPIKey("fixture"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed := 7
+	req := &model.Request{Messages: []*model.Message{model.UserText("hi")}, Seed: &seed,
+		ProviderOptions: map[string]map[string]any{"gemini": {"cachedContent": "c1"}, "openai": {"user": "u1"}}}
+	body, _, err := m.build(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(body, &fields); err != nil {
+		t.Fatal(err)
+	}
+	gc, _ := fields["generationConfig"].(map[string]any)
+	if gc["seed"] != float64(7) || fields["cachedContent"] != "c1" || fields["user"] != nil {
+		t.Fatalf("body = %s", body)
+	}
+}

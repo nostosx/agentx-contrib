@@ -247,7 +247,7 @@ func (m *Model) build(req *model.Request, stream bool) ([]byte, http.Header, err
 	if drop {
 		betas = append(betas, ThinkingBindingBeta)
 	}
-	body, err := utils.EncodeBody(providerName, r, req.Extra)
+	body, err := utils.EncodeBody(providerName, r, req.ProviderOptions[providerName])
 	return body, m.headers(name, betas...), err
 }
 

@@ -59,7 +59,7 @@ func TestBuild(t *testing.T) {
 		t.Fatalf("temperature dropped without reasoning: %s, %v", body, err)
 	}
 	req.Temperature, req.TopP, req.Reasoning = nil, nil, &model.Reasoning{Effort: "high"}
-	req.Extra = map[string]any{"stream": nil, "model": "custom"}
+	req.ProviderOptions = map[string]map[string]any{"openai": {"stream": nil, "model": "custom"}, "anthropic": {"model": "ignored"}}
 	body, err = m.build(req, true)
 	if err != nil {
 		t.Fatal(err)
@@ -139,5 +139,29 @@ func TestResponseConversion(t *testing.T) {
 				t.Errorf("reason = %s", got)
 			}
 		})
+	}
+}
+
+// Chat Completions sends the portable seed; the options of other providers
+// stay out of the body.
+func TestBuildSeedAndProviderOptions(t *testing.T) {
+	t.Parallel()
+	m, err := New(WithAPIKey("fixture"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed := 7
+	req := &model.Request{Messages: []*model.Message{model.UserText("hi")}, Seed: &seed,
+		ProviderOptions: map[string]map[string]any{"openai": {"user": "u1"}, "gemini": {"safetySettings": []any{}}}}
+	body, err := m.build(req, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(body, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields["seed"] != float64(7) || fields["user"] != "u1" || fields["safetySettings"] != nil {
+		t.Fatalf("body = %s", body)
 	}
 }
