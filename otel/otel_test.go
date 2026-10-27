@@ -26,6 +26,7 @@ import (
 	"github.com/nostosx/agentx/middleware"
 	"github.com/nostosx/agentx/model"
 	"github.com/nostosx/agentx/model/modeltest"
+	"github.com/nostosx/agentx/telemetry"
 	"github.com/nostosx/agentx/tool"
 )
 
@@ -370,10 +371,10 @@ func (retryOnce) Name() string { return "retry" }
 
 func (retryOnce) WrapModel(_ *loop.Run, next model.Model) model.Model {
 	note := func(ctx context.Context, err error) {
-		middleware.AddEvent(ctx, "agentx.retry",
-			middleware.Attr{Key: "agentx.retry.attempt", Value: 1},
-			middleware.Attr{Key: "agentx.retry.delay", Value: 0.001},
-			middleware.Attr{Key: "error.type", Value: middleware.ErrorType(err)})
+		telemetry.AddEvent(ctx, "agentx.retry",
+			telemetry.Attr{Key: "agentx.retry.attempt", Value: 1},
+			telemetry.Attr{Key: "agentx.retry.delay", Value: 0.001},
+			telemetry.Attr{Key: "error.type", Value: telemetry.ErrorType(err)})
 	}
 	return &middleware.Funcs{
 		Next: next,

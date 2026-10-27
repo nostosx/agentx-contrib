@@ -22,6 +22,7 @@ import (
 	"github.com/nostosx/agentx/memory"
 	"github.com/nostosx/agentx/middleware"
 	"github.com/nostosx/agentx/model"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 // Policy configures New, Model and Embedder.
@@ -91,10 +92,10 @@ func (p Policy) backoff(ctx context.Context, attempt int, err error) error {
 	if !ok {
 		return err
 	}
-	middleware.AddEvent(ctx, "agentx.retry",
-		middleware.Attr{Key: "agentx.retry.attempt", Value: attempt},
-		middleware.Attr{Key: "agentx.retry.delay", Value: d.Seconds()},
-		middleware.Attr{Key: "error.type", Value: middleware.ErrorType(err)})
+	telemetry.AddEvent(ctx, "agentx.retry",
+		telemetry.Attr{Key: "agentx.retry.attempt", Value: attempt},
+		telemetry.Attr{Key: "agentx.retry.delay", Value: d.Seconds()},
+		telemetry.Attr{Key: "error.type", Value: telemetry.ErrorType(err)})
 	t := time.NewTimer(d)
 	defer t.Stop()
 	select {
@@ -121,7 +122,7 @@ func (r runtime) WrapModel(_ *loop.Run, next model.Model) model.Model { return r
 // the last failure.
 //
 // Each retry adds an "agentx.retry" event to the span of the call's context
-// (see middleware.AddEvent) with the failed attempt (agentx.retry.attempt,
+// (see telemetry.AddEvent) with the failed attempt (agentx.retry.attempt,
 // from 1), the delay in seconds (agentx.retry.delay) and error.type.
 // Wrapped by tracing, as when middleware.Tracing is registered before New,
 // that is the model call's span.

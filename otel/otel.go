@@ -4,8 +4,8 @@
 // a separate module, github.com/nostosx/agentx-contrib/otel, so programs using
 // OpenTelemetry take on its dependencies.
 //
-// Tracer and Meter adapt OpenTelemetry providers to middleware.Tracer and
-// middleware.Meter, and Middleware returns the tracing and metrics
+// Tracer and Meter adapt OpenTelemetry providers to telemetry.Tracer and
+// telemetry.Meter, and Middleware returns the tracing and metrics
 // middleware of an agent:
 //
 //	a := agent.MustNew("assistant",
@@ -15,7 +15,7 @@
 //
 // Spans, metrics and events follow the OpenTelemetry GenAI semantic
 // conventions (https://github.com/open-telemetry/semantic-conventions-genai);
-// see middleware.Tracer and middleware.Meter for what is recorded.
+// see telemetry.Tracer and telemetry.Meter for what is recorded.
 package otel
 
 import (
@@ -29,6 +29,7 @@ import (
 	agentx "github.com/nostosx/agentx"
 	"github.com/nostosx/agentx/loop"
 	"github.com/nostosx/agentx/middleware"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 // ScopeName is the instrumentation scope of the telemetry this package
@@ -95,11 +96,11 @@ func Middleware(tp trace.TracerProvider, mp metric.MeterProvider, opts ...Option
 	}
 }
 
-// Tracer adapts tp to middleware.Tracer; a nil tp uses the global provider.
+// Tracer adapts tp to telemetry.Tracer; a nil tp uses the global provider.
 // Span kinds map to OpenTelemetry's, attributes to attribute values, and a
 // recorded error to an exception event and an error status. Only
 // WithLoggerProvider applies.
-func Tracer(tp trace.TracerProvider, opts ...Option) middleware.Tracer {
+func Tracer(tp trace.TracerProvider, opts ...Option) telemetry.Tracer {
 	if tp == nil {
 		tp = otelapi.GetTracerProvider()
 	}
@@ -110,10 +111,10 @@ func Tracer(tp trace.TracerProvider, opts ...Option) middleware.Tracer {
 	return t
 }
 
-// Meter adapts mp to middleware.Meter; a nil mp uses the global provider.
+// Meter adapts mp to telemetry.Meter; a nil mp uses the global provider.
 // Histograms get the bucket boundaries the conventions advise. No option
 // applies.
-func Meter(mp metric.MeterProvider, _ ...Option) middleware.Meter {
+func Meter(mp metric.MeterProvider, _ ...Option) telemetry.Meter {
 	if mp == nil {
 		mp = otelapi.GetMeterProvider()
 	}

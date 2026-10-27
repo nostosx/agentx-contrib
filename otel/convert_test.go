@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 
-	"github.com/nostosx/agentx/middleware"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 func TestKeyValue(t *testing.T) {
@@ -36,11 +36,11 @@ func TestKeyValue(t *testing.T) {
 		{errors.New("e"), attribute.StringValue("e")},
 		{struct{ A int }{1}, attribute.StringValue("{1}")},
 	} {
-		if got := keyValue(middleware.Attr{Key: "k", Value: tc.value}); got.Value != tc.want {
+		if got := keyValue(telemetry.Attr{Key: "k", Value: tc.value}); got.Value != tc.want {
 			t.Errorf("%T %v: got %v, want %v", tc.value, tc.value, got.Value.String(), tc.want.String())
 		}
 	}
-	if kvs := attributes([]middleware.Attr{{Key: "nil"}, {Key: "k", Value: 1}}); len(kvs) != 1 {
+	if kvs := attributes([]telemetry.Attr{{Key: "nil"}, {Key: "k", Value: 1}}); len(kvs) != 1 {
 		t.Errorf("nil attribute kept: %v", kvs)
 	}
 }
@@ -109,18 +109,18 @@ func (failingMeter) Float64Histogram(string, ...metric.Float64HistogramOption) (
 func TestMeterFallsBackToNoop(t *testing.T) {
 	t.Parallel()
 	m := meter{failingMeter{}}
-	m.Int64Counter(middleware.Instrument{Name: "c"}).Add(t.Context(), 1)
-	m.Int64Histogram(middleware.Instrument{Name: "h"}).Record(t.Context(), 1)
-	m.Float64Histogram(middleware.Instrument{Name: "f"}).Record(t.Context(), 1)
+	m.Int64Counter(telemetry.Instrument{Name: "c"}).Add(t.Context(), 1)
+	m.Int64Histogram(telemetry.Instrument{Name: "h"}).Record(t.Context(), 1)
+	m.Float64Histogram(telemetry.Instrument{Name: "f"}).Record(t.Context(), 1)
 }
 
 func TestGlobalProviders(t *testing.T) {
 	t.Parallel()
-	ctx, span := Tracer(nil).Start(t.Context(), "s", middleware.SpanKindClient)
+	ctx, span := Tracer(nil).Start(t.Context(), "s", telemetry.SpanKindClient)
 	span.RecordError(nil)
 	span.End()
 	if ctx == nil {
 		t.Fatal("nil context")
 	}
-	Meter(nil).Int64Counter(middleware.Instrument{Name: "c", Unit: "1"}).Add(t.Context(), 1)
+	Meter(nil).Int64Counter(telemetry.Instrument{Name: "c", Unit: "1"}).Add(t.Context(), 1)
 }

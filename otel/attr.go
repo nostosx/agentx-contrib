@@ -9,11 +9,11 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/nostosx/agentx/middleware"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 // attributes converts attributes, dropping those without a value.
-func attributes(attrs []middleware.Attr) []attribute.KeyValue {
+func attributes(attrs []telemetry.Attr) []attribute.KeyValue {
 	kvs := make([]attribute.KeyValue, 0, len(attrs))
 	for _, a := range attrs {
 		if kv := keyValue(a); kv.Valid() {
@@ -25,7 +25,7 @@ func attributes(attrs []middleware.Attr) []attribute.KeyValue {
 
 // keyValue converts an attribute. Values of other types than those of
 // OpenTelemetry attributes are recorded as their string form.
-func keyValue(a middleware.Attr) attribute.KeyValue {
+func keyValue(a telemetry.Attr) attribute.KeyValue {
 	switch v := a.Value.(type) {
 	case nil:
 		return attribute.KeyValue{}

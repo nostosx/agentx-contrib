@@ -12,6 +12,7 @@ import (
 	"github.com/nostosx/agentx/middleware"
 	"github.com/nostosx/agentx/model"
 	"github.com/nostosx/agentx/model/modeltest"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 // event is a span event a recordingTracer recorded.
@@ -20,7 +21,7 @@ type event struct {
 	attrs map[string]any
 }
 
-// recordingSpan is a middleware.EventSpan that records what it is given.
+// recordingSpan is a telemetry.EventSpan that records what it is given.
 type recordingSpan struct {
 	name   string
 	mu     sync.Mutex
@@ -28,7 +29,7 @@ type recordingSpan struct {
 	errors []error
 }
 
-func (s *recordingSpan) SetAttributes(...middleware.Attr) {}
+func (s *recordingSpan) SetAttributes(...telemetry.Attr) {}
 
 func (s *recordingSpan) RecordError(err error) {
 	s.mu.Lock()
@@ -38,7 +39,7 @@ func (s *recordingSpan) RecordError(err error) {
 
 func (s *recordingSpan) End() {}
 
-func (s *recordingSpan) AddEvent(name string, attrs ...middleware.Attr) {
+func (s *recordingSpan) AddEvent(name string, attrs ...telemetry.Attr) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ev := event{name: name, attrs: map[string]any{}}
@@ -54,7 +55,7 @@ type recordingTracer struct {
 	spans []*recordingSpan
 }
 
-func (tr *recordingTracer) Start(ctx context.Context, name string, _ middleware.SpanKind, _ ...middleware.Attr) (context.Context, middleware.Span) {
+func (tr *recordingTracer) Start(ctx context.Context, name string, _ telemetry.SpanKind, _ ...telemetry.Attr) (context.Context, telemetry.Span) {
 	s := &recordingSpan{name: name}
 	tr.mu.Lock()
 	defer tr.mu.Unlock()

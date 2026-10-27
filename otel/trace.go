@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/nostosx/agentx/middleware"
+	"github.com/nostosx/agentx/telemetry"
 )
 
 type tracer struct {
@@ -21,32 +21,32 @@ type tracer struct {
 	logger log.Logger
 }
 
-func spanKind(k middleware.SpanKind) trace.SpanKind {
-	if k == middleware.SpanKindClient {
+func spanKind(k telemetry.SpanKind) trace.SpanKind {
+	if k == telemetry.SpanKindClient {
 		return trace.SpanKindClient
 	}
 	return trace.SpanKindInternal
 }
 
-// Start implements middleware.Tracer. The attributes are given at span
+// Start implements telemetry.Tracer. The attributes are given at span
 // creation, so samplers see them.
-func (t *tracer) Start(ctx context.Context, name string, kind middleware.SpanKind, attrs ...middleware.Attr) (context.Context, middleware.Span) {
+func (t *tracer) Start(ctx context.Context, name string, kind telemetry.SpanKind, attrs ...telemetry.Attr) (context.Context, telemetry.Span) {
 	ctx, s := t.t.Start(ctx, name, trace.WithSpanKind(spanKind(kind)), trace.WithAttributes(attributes(attrs)...))
 	sp := &span{s: s}
-	if t.logger != nil && kind == middleware.SpanKindClient {
+	if t.logger != nil && kind == telemetry.SpanKindClient {
 		sp.events = &events{logger: t.logger, ctx: ctx, attrs: slices.Clone(attrs)}
 	}
 	return ctx, sp
 }
 
-// span adapts a span; it implements middleware.EventSpan.
+// span adapts a span; it implements telemetry.EventSpan.
 type span struct {
 	s trace.Span
 	// events is set for the model call spans of a tracer with a logger.
 	events *events
 }
 
-func (s *span) SetAttributes(attrs ...middleware.Attr) {
+func (s *span) SetAttributes(attrs ...telemetry.Attr) {
 	s.s.SetAttributes(attributes(attrs)...)
 	if s.events != nil {
 		s.events.add(attrs)
@@ -64,7 +64,7 @@ func (s *span) RecordError(err error) {
 	}
 }
 
-func (s *span) AddEvent(name string, attrs ...middleware.Attr) {
+func (s *span) AddEvent(name string, attrs ...telemetry.Attr) {
 	s.s.AddEvent(name, trace.WithAttributes(attributes(attrs)...))
 }
 
@@ -86,10 +86,10 @@ type events struct {
 	logger log.Logger
 	ctx    context.Context
 	mu     sync.Mutex
-	attrs  []middleware.Attr
+	attrs  []telemetry.Attr
 }
 
-func (e *events) add(attrs []middleware.Attr) {
+func (e *events) add(attrs []telemetry.Attr) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.attrs = append(e.attrs, attrs...)
