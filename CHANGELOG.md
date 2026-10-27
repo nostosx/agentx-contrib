@@ -1,16 +1,27 @@
 # Changelog
 
 Modules are versioned independently with tags of the form `<module>/vX.Y.Z`.
-The initial release of each module is v1.0.0. Published v1 releases preserve
-public API compatibility. Record subsequent changes under `Unreleased`,
-identifying the module.
+The initial release of each module is v1.0.0. Patch releases preserve the
+public API; minor releases may contain breaking changes, each marked with its
+migration. Record subsequent changes under `Unreleased`, identifying the
+module.
 
 All modules require Go 1.27.3 or later and use published agentx and kitx
-v1.0.0 without replacements. See [RELEASING.md](RELEASING.md) for release gates.
+versions without replacements. See [RELEASING.md](RELEASING.md) for release gates.
 
 ## Unreleased
 
-- provider: adopt agentx v1.1.0. Adapters read their own entry of
+- Document standalone module installation and a runnable file-store quick start.
+- Clarify filestore revision-check, snapshot and lock-file ownership boundaries
+  when multiple instances or processes access the same paths.
+- Correct sqlstore transaction guidance: store operations can execute multiple
+  statements and join a transaction only when the caller provides one.
+
+## provider/v1.1.0
+
+Release date: 2026-10-27.
+
+- Adopt agentx v1.1.0. Adapters read their own entry of
   `model.Request.ProviderOptions` (`"openai"`, `"anthropic"`, `"gemini"`,
   `"bedrock"`) instead of the removed `Extra`, so options for one provider no
   longer reach another. OpenAI Chat Completions sends `Request.Seed` as `seed`
@@ -18,16 +29,21 @@ v1.0.0 without replacements. See [RELEASING.md](RELEASING.md) for release gates.
   Bedrock have no seed and ignore it. Reasoning effort and display use the
   typed `model.Effort` and `model.ReasoningDisplay`. Breaking: requires agentx
   v1.1.0; pass provider fields with `agent.WithProviderOptions`.
-- otel: adopt agentx v1.1.0. `otel.Tracer` and `otel.Meter` return
+
+## otel/v1.1.0
+
+Release date: 2026-10-27.
+
+- Adopt agentx v1.1.0. `otel.Tracer` and `otel.Meter` return
   `telemetry.Tracer` and `telemetry.Meter`, whose interfaces moved from
   agentx's `middleware` package. Breaking: requires agentx v1.1.0.
-- middleware: adopt agentx v1.1.0. Retry records its `agentx.retry` events
+
+## middleware/v1.1.0
+
+Release date: 2026-10-27.
+
+- Adopt agentx v1.1.0. Retry records its `agentx.retry` events
   through the `telemetry` package. Breaking: requires agentx v1.1.0.
-- Document standalone module installation and a runnable file-store quick start.
-- Clarify filestore revision-check, snapshot and lock-file ownership boundaries
-  when multiple instances or processes access the same paths.
-- Correct sqlstore transaction guidance: store operations can execute multiple
-  statements and join a transaction only when the caller provides one.
 
 ## provider/v1.0.0
 

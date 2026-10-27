@@ -28,18 +28,20 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 ## 安装
 
-各模块从 v1.0.0 开始独立发布，使用已发布的 agentx 和 kitx v1.0.0。
+各模块独立发布版本。`provider`、`middleware` 和 `otel` v1.1.0 需要 agentx v1.1.0；
+`filestore` 和 `sqlstore` v1.0.0 需要 agentx v1.0.0，也能与 v1.1.0 一起构建。所有模块
+都使用已发布的 kitx v1.0.0。
 按应用所需安装对应模块即可。Go 1.27.3 是工具链要求，与模块版本独立。
 
 在应用的 Go 模块内执行这些命令。新建应用时，先创建目录并在其中运行
 `go mod init example.com/agentx-app`。本仓库根目录不是可安装的模块。
 
 ```sh
-go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
+go get github.com/nostosx/agentx@v1.1.0 github.com/nostosx/agentx-contrib/provider@v1.1.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # 文件存储
 go get github.com/nostosx/agentx-contrib/sqlstore@v1.0.0      # SQL 存储
-go get github.com/nostosx/agentx-contrib/middleware@v1.0.0    # 日志和重试
-go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
+go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # 日志和重试
+go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
 ```
 
 每个模块单独发布版本，标签形如 `<dir>/vX.Y.Z`，例如 `provider/v1.0.0`。
@@ -107,7 +109,7 @@ func main() {
 `"bedrock"`）传入，每个适配器只把自己的选项合并进请求体。`agent.WithSeed` 由 OpenAI
 Chat Completions 和 Gemini 发送，其他适配器忽略。
 
-这些 Provider 是用模拟 API 的本地服务器测试的。v1.0.0 尚未验证真实 API 的兼容性；如果 API 拒绝了某个请求，请提交 issue。
+这些 Provider 是用模拟 API 的本地服务器测试的。尚未验证真实 API 的兼容性；如果 API 拒绝了某个请求，请提交 issue。
 
 ```go
 m, err := anthropic.New() // 读取 ANTHROPIC_API_KEY
@@ -384,7 +386,7 @@ provider 和文件存储模块。目录布局、Provider 环境变量及 `cmd/` 
 ## 开发
 
 使用 Go 1.27.3、GNU Make、Bash 和 Python 3。仓库根目录不是模块，也没有提交 `go.work`。
-独立检出本仓库即可，agentx 和 kitx v1.0.0 均由 Go 模块代理下载，无需同级源码。
+独立检出本仓库即可，已发布的 agentx 和 kitx 版本均由 Go 模块代理下载，无需同级源码。
 所有 Make 入口设置 `GOWORK=off`。
 
 ```sh

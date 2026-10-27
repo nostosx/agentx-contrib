@@ -33,8 +33,10 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-Each module starts at v1.0.0 and uses the published agentx and kitx v1.0.0
-dependencies. Install only the modules your application needs. Go 1.27.3 is
+Modules are versioned independently. `provider`, `middleware` and `otel`
+v1.1.0 require agentx v1.1.0; `filestore` and `sqlstore` v1.0.0 require agentx
+v1.0.0 and also build with v1.1.0. All use the published kitx v1.0.0. Install
+only the modules your application needs. Go 1.27.3 is
 the toolchain requirement; module versions are maintained independently.
 
 Run these commands inside your application's Go module. For a new application,
@@ -42,11 +44,11 @@ create a directory and run `go mod init example.com/agentx-app` there first.
 The repository root is not an installable module.
 
 ```sh
-go get github.com/nostosx/agentx@v1.0.0 github.com/nostosx/agentx-contrib/provider@v1.0.0
+go get github.com/nostosx/agentx@v1.1.0 github.com/nostosx/agentx-contrib/provider@v1.1.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # file stores
 go get github.com/nostosx/agentx-contrib/sqlstore@v1.0.0      # SQL stores
-go get github.com/nostosx/agentx-contrib/middleware@v1.0.0    # logging and retries
-go get github.com/nostosx/agentx-contrib/otel@v1.0.0          # OpenTelemetry
+go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # logging and retries
+go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
 ```
 
 Each module is versioned on its own, with tags of the form
@@ -119,7 +121,7 @@ options into the request body. `agent.WithSeed` is sent by OpenAI Chat
 Completions and Gemini and ignored by the others.
 
 The providers are tested against local servers that mimic the APIs.
-They have not been verified against live APIs for v1.0.0;
+They have not been verified against live APIs;
 please report a request the API rejects.
 
 ```go
@@ -430,7 +432,7 @@ setup, provider environment variables and commands under `cmd/`.
 ## Development
 
 Use Go 1.27.3, GNU Make, Bash and Python 3. Clone this repository on its own;
-agentx and kitx v1.0.0 download through the Go module proxy. The root is not a
+the published agentx and kitx versions download through the Go module proxy. The root is not a
 module, and no `go.work` is committed. All Make targets set `GOWORK=off`.
 
 ```sh
