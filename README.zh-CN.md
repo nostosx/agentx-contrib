@@ -18,7 +18,7 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 | 模块 | 包 | 实现 | 第三方依赖 |
 | --- | --- | --- | --- |
 | `github.com/nostosx/agentx-contrib/provider` | `provider/openai`、`provider/anthropic`、`provider/gemini`、`provider/bedrock` | `model.Model`；`memory.Embedder`（`openai`、`gemini`） | `github.com/nostosx/kitx/dataurl`、`github.com/nostosx/kitx/utf8text` |
-| `github.com/nostosx/agentx-contrib/otel` | `otel` | 基于 OpenTelemetry 的 `middleware.Tracer` 和 `middleware.Meter` | `go.opentelemetry.io/otel` 及其 `trace`、`metric` 和 `log` API（SDK 仅用于测试） |
+| `github.com/nostosx/agentx-contrib/otel` | `otel` | 基于 OpenTelemetry 的 `telemetry.Tracer` 和 `telemetry.Meter` | `go.opentelemetry.io/otel` 及其 `trace`、`metric` 和 `log` API（SDK 仅用于测试） |
 | `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | SQLite、PostgreSQL 和 MySQL 上的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer` 和 `memory.Store` | 包本身无；测试使用 `modernc.org/sqlite`、`github.com/jackc/pgx/v5` 和 `github.com/go-sql-driver/mysql` |
 | `github.com/nostosx/agentx-contrib/filestore` | `filestore` | 基于 JSON 文件的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store`、`rag.VectorStore` 和 `mcp.TokenStore` | `github.com/nostosx/kitx/atomicfile` |
 | `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`、`middleware/retry` | `loop.Middleware`、模型和工具装饰器，以及带重试的 `memory.Embedder` | 无 |
@@ -103,7 +103,9 @@ func main() {
 各 Provider 不使用 SDK，直接通过 `net/http` 调用 API。所有 Provider 都支持
 普通调用、流式、工具调用、图片、文档和结构化输出；媒体见
 [多模态内容](#多模态内容)。某个 Provider 特有的请求字段可以通过
-`agent.WithExtra` 传入。
+`agent.WithProviderOptions` 按适配器名（`"openai"`、`"anthropic"`、`"gemini"` 或
+`"bedrock"`）传入，每个适配器只把自己的选项合并进请求体。`agent.WithSeed` 由 OpenAI
+Chat Completions 和 Gemini 发送，其他适配器忽略。
 
 这些 Provider 是用模拟 API 的本地服务器测试的。v1.0.0 尚未验证真实 API 的兼容性；如果 API 拒绝了某个请求，请提交 issue。
 
@@ -166,8 +168,8 @@ m, _ := anthropic.New(anthropic.WithVertex("my-project", "global"),
 
 - **加密推理**：无状态的 Responses 请求默认就会返回带加密内容的推理，所以
   `provider/openai` 不发送 `include`。`openai.WithEncryptedReasoning(true)`
-  会加上旧的 `reasoning.encrypted_content` 值，通过 `Extra` 传入的 `include`
-  会被合并。
+  会加上旧的 `reasoning.encrypted_content` 值，通过 `"openai"` Provider 选项传入的
+  `include` 会被合并。
 - **自由格式工具**：`provider/openai` 把带语法的工具（`tool.Freeform`），例如
   `apply_patch`，作为自定义工具发送给 Responses API，其调用携带纯文本。
   `openai.WithFreeformTools(false)` 会改为以函数形式发送，适用于不支持自定义
@@ -347,7 +349,7 @@ Loop 的模型调用，例如 `actx.Summarize` 策略使用的模型，可以用
 `otel` 把 agentx 的链路追踪和指标（遵循
 [OpenTelemetry GenAI 语义约定](https://github.com/open-telemetry/semantic-conventions-genai)）
 适配到 OpenTelemetry Provider。`otel.Tracer` 和 `otel.Meter` 返回
-`middleware.Tracer` 和 `middleware.Meter`，`otel.Middleware` 返回基于它们的
+`telemetry.Tracer` 和 `telemetry.Meter`，`otel.Middleware` 返回基于它们的
 `middleware.Tracing` 和 `middleware.Metrics`。传入 nil 时使用全局 Provider。
 
 ```go

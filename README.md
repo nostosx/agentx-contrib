@@ -22,7 +22,7 @@ imports.
 | Module | Packages | Implements | Third-party dependencies |
 | --- | --- | --- | --- |
 | `github.com/nostosx/agentx-contrib/provider` | `provider/openai`, `provider/anthropic`, `provider/gemini`, `provider/bedrock` | `model.Model`; `memory.Embedder` (`openai`, `gemini`) | `github.com/nostosx/kitx/dataurl`, `github.com/nostosx/kitx/utf8text` |
-| `github.com/nostosx/agentx-contrib/otel` | `otel` | `middleware.Tracer` and `middleware.Meter` over OpenTelemetry | `go.opentelemetry.io/otel` with its `trace`, `metric` and `log` APIs (the SDK only in tests) |
+| `github.com/nostosx/agentx-contrib/otel` | `otel` | `telemetry.Tracer` and `telemetry.Meter` over OpenTelemetry | `go.opentelemetry.io/otel` with its `trace`, `metric` and `log` APIs (the SDK only in tests) |
 | `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer` and `memory.Store` on SQLite, PostgreSQL and MySQL | none in the package; its tests use `modernc.org/sqlite`, `github.com/jackc/pgx/v5` and `github.com/go-sql-driver/mysql` |
 | `github.com/nostosx/agentx-contrib/filestore` | `filestore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store`, `rag.VectorStore` and `mcp.TokenStore` in JSON files | `github.com/nostosx/kitx/atomicfile` |
 | `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`, `middleware/retry` | `loop.Middleware`, model and tool decorators and a retrying `memory.Embedder` | none |
@@ -112,7 +112,11 @@ see the [agentx quick start](https://github.com/nostosx/agentx#quick-start).
 The providers call the APIs directly over `net/http`, with no SDK. Every
 provider supports regular calls, streaming, tool calls, images, documents
 and structured output; see [Multimodal content](#multimodal-content) for
-media. For request fields specific to one provider, use `agent.WithExtra`.
+media. For request fields specific to one provider, use
+`agent.WithProviderOptions` with the adapter's name (`"openai"`,
+`"anthropic"`, `"gemini"` or `"bedrock"`); each adapter merges only its own
+options into the request body. `agent.WithSeed` is sent by OpenAI Chat
+Completions and Gemini and ignored by the others.
 
 The providers are tested against local servers that mimic the APIs.
 They have not been verified against live APIs for v1.0.0;
@@ -183,8 +187,8 @@ m, _ := anthropic.New(anthropic.WithVertex("my-project", "global"),
 - **Encrypted reasoning.** Stateless Responses requests return reasoning
   with its encrypted content by default, so `provider/openai` sends no
   `include`. `openai.WithEncryptedReasoning(true)` adds the legacy
-  `reasoning.encrypted_content` value, and an `include` passed through
-  `Extra` is merged.
+  `reasoning.encrypted_content` value, and an `include` passed in the
+  `"openai"` provider options is merged.
 - **Freeform tools.** `provider/openai` sends tools with a grammar
   (`tool.Freeform`), such as `apply_patch`, to the Responses API as custom
   tools, whose calls carry plain text. `openai.WithFreeformTools(false)`
@@ -387,7 +391,7 @@ model of an `actx.Summarize` strategy, wrap the model with the decorators:
 `otel` adapts agentx's tracing and metrics, which follow the
 [OpenTelemetry GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai),
 to OpenTelemetry providers. `otel.Tracer` and `otel.Meter` return a
-`middleware.Tracer` and `middleware.Meter`, and `otel.Middleware` returns
+`telemetry.Tracer` and `telemetry.Meter`, and `otel.Middleware` returns
 `middleware.Tracing` and `middleware.Metrics` backed by them. A nil provider
 uses the global one.
 
