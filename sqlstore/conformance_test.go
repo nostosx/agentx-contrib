@@ -77,7 +77,7 @@ func opener(driver, dsn string) func(t *testing.T) *sql.DB {
 	}
 }
 
-var tables = []string{"sessions", "checkpoints", "workflow_checkpoints", "memories"}
+var tables = []string{"sessions", "checkpoints", "workflow_checkpoints", "memories", "mcp_credentials"}
 
 // fresh returns options with a new table prefix, whose tables are created
 // now and dropped when the test ends.

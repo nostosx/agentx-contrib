@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/nostosx/agentx v1.0.0
+	github.com/nostosx/agentx v1.2.1
 	modernc.org/sqlite v1.44.3
 )
 

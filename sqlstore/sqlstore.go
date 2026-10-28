@@ -1,5 +1,6 @@
 // Package sqlstore stores sessions, run checkpoints, workflow checkpoints
-// and long-term memory in a SQL database through database/sql.
+// and long-term memory in a SQL database through database/sql. MCPTokens
+// additionally stores authenticated-encrypted MCP OAuth credentials.
 //
 // The package imports no driver: open the database with the driver of
 // your choice and pass the handle, a *sql.DB, *sql.Conn or *sql.Tx, to
@@ -17,7 +18,8 @@
 // # Schema
 //
 // Each store has one table, named with a prefix ("agentx_" by default; see
-// WithPrefix): sessions, checkpoints, workflow_checkpoints and memories.
+// WithPrefix): sessions, checkpoints, workflow_checkpoints, memories and
+// mcp_credentials. MCP records use hashed keys and encrypted binary values.
 // Values are stored as JSON documents in a text column next to the key and
 // the columns needed to list them, so the schema does not change with the
 // Go types. Column types are chosen to be portable and exact:
@@ -146,6 +148,7 @@ func Migrate(ctx context.Context, db DB, opts ...Option) error {
 		(&CheckpointStore{c: c}).Migrate,
 		(&WorkflowCheckpointStore{c: c}).Migrate,
 		(&MemoryStore{c: c}).Migrate,
+		func(ctx context.Context) error { return migrateTokens(ctx, c) },
 	} {
 		if err := m(ctx); err != nil {
 			return err

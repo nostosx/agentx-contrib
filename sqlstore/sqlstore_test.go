@@ -67,7 +67,7 @@ func TestSchema(t *testing.T) {
 			created = append(created, strings.Fields(name)[0])
 		}
 	}
-	if !slices.Equal(created, []string{"sessions", "checkpoints", "workflow_checkpoints", "memories"}) {
+	if !slices.Equal(created, []string{"sessions", "checkpoints", "workflow_checkpoints", "memories", "mcp_credentials"}) {
 		t.Fatalf("Migrate created %v", created)
 	}
 	if !strings.Contains(db.stmts[0], "id VARCHAR(128) NOT NULL,\n\trevision BIGINT NOT NULL,") {
