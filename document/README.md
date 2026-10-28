@@ -1,0 +1,101 @@
+# document
+
+`github.com/nostosx/agentx-contrib/document` provides `rag.Parser` adapters
+for DOCX and PDF files. Requires Go 1.27.3.
+
+| Parser | Implementation | Runtime dependency |
+| --- | --- | --- |
+| `document.DOCX` | Streams the main OOXML document with `archive/zip` and `encoding/xml` | none |
+| `document.PDF` | Calls Poppler `pdftotext` through `exec.CommandContext`, without a shell | separately installed `pdftotext` executable |
+
+No converter is downloaded automatically, no PDF SDK is linked, and no file
+is uploaded to a service. The application's deployment owns Poppler updates
+and its executable's distribution/license requirements. Poppler's command
+documentation is available in the [pdftotext manual](https://manpages.debian.org/testing/poppler-utils/pdftotext.1.en.html).
+
+## Usage
+
+Add the parsers to the application's filesystem loader:
+
+```go
+parsers := rag.DefaultParsers()
+parsers[".docx"] = document.DOCX{}
+parsers[".pdf"] = document.PDF{Command: "/usr/bin/pdftotext"}
+loader := &rag.FSLoader{FS: os.DirFS("documents"), Parsers: parsers}
+```
+
+This is an assembly fragment; import `github.com/nostosx/agentx/rag`,
+`github.com/nostosx/agentx-contrib/document` and `os` in the application.
+For URL sources, set `rag.URLLoader.Parser` to the corresponding parser.
+
+Both parsers implement `Parse(ctx, source, data)` and retain the source on
+every returned document. They fail on malformed input and return
+`document.ErrNoText` when no extractable text exists.
+
+## PDF
+
+The default executable is `pdftotext` from `PATH`; `Command` accepts one
+trusted executable path or name, never shell syntax. Input and output use
+pipes rather than temporary files. The converter runs with the caller's
+environment and process privileges; applications handling hostile files
+should apply their own process sandbox and OS resource limits.
+
+PDF output contains one document for each page with text. IDs are
+`<source>#page=<number>`; metadata records `format=pdf`, the original 1-based
+`page`, and `page_count`. Empty pages keep their position and are listed
+under `textless_pages` in every returned document. A textless page may be
+blank, scanned, or have fonts without an extractable encoding; text extraction
+cannot distinguish these cases.
+
+A wholly textless PDF returns `ErrNoText`. Applications may set `PDF.OCR` to
+an explicit `rag.Parser` fallback; it receives the original bytes only when
+the whole document has no extractable text. This package implements no OCR,
+does not manufacture text for scanned pages, and never automatically calls
+a model. The fallback owns its limits and page/source metadata. Partial PDFs
+retain `textless_pages`; an OCR fallback is not invoked for them.
+
+Defaults: 32 MiB input, 32 MiB extracted text, 1000 pages and a 30-second
+process deadline. Fields `MaxBytes`, `MaxTextBytes`, `MaxPages` and `Timeout`
+can lower or raise these limits. Zero selects a default; negative values
+are rejected. A page limit is detected by requesting one extra page, not
+silently truncating the document. Converter failures preserve the underlying
+error, while stderr content is excluded from returned errors.
+
+## DOCX
+
+DOCX extracts the main document's paragraphs and table-cell paragraphs,
+preserving tabs and line breaks. Deleted revision text is omitted. It does
+not extract headers, footers, comments, drawings, images or embedded files;
+external relationships are ignored. DOCX pagination depends on layout and
+fonts, so the parser never claims rendered page numbers. Metadata records
+`format=docx` and the number of `explicit_page_breaks` in the main document.
+
+Defaults: 32 MiB input, 32 MiB text, 128 MiB aggregate declared ZIP expansion,
+4096 ZIP entries and at most 256 nested XML elements. Configure `MaxBytes`,
+`MaxTextBytes`, `MaxArchiveBytes` and `MaxEntries` as needed. Duplicate main
+document entries, unsafe archive paths, malformed XML and excessive limits
+are rejected. Actual main-part reads are independently bounded and honor
+context cancellation. Archives are decoded in memory and never extracted to
+the filesystem.
+
+## Tests
+
+Unit tests need no Poppler installation. They cover OOXML parsing, ZIP/XML
+limits and validation, PDF page metadata and partial text, bounded subprocess
+output, deadline cancellation, error privacy and explicit OCR fallback.
+Subprocess tests use the Go test binary itself, and run on all three CI OSes.
+
+Run the real converter integration test with an installed Poppler binary:
+
+```sh
+AGENTX_IT_PDFTOTEXT=/absolute/path/to/pdftotext GOWORK=off \
+  go test -race -tags integration -shuffle=on -count=1 ./...
+```
+
+Missing configuration skips the integration test in direct Go runs; skipping
+does not prove converter compatibility. It uses generated, local PDF fixtures
+and no network or production files.
+
+## License
+
+[MIT](LICENSE).
