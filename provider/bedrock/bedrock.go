@@ -156,6 +156,7 @@ type Model struct {
 	header     http.Header
 	model      string
 	maxTokens  int
+	dimensions int
 	apiKey     string
 	creds      CredentialsProvider
 	authSet    bool

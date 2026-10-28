@@ -205,8 +205,8 @@ func TestEmbedderTaskTypes(t *testing.T) {
 	if _, err := NewEmbedder(WithAPIKey("k"), WithTaskType("SEARCH")); err == nil {
 		t.Fatal("unknown task type accepted")
 	}
-	if _, err := NewEmbedder(WithVertex("p", "global"), WithTokenSource(token("t"))); err == nil {
-		t.Fatal("Vertex embedder accepted")
+	if _, err := NewEmbedder(WithVertex("p", "global"), WithTokenSource(token("t"))); err != nil {
+		t.Fatalf("Vertex embedder: %v", err)
 	}
 }
 

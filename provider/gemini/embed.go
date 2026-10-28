@@ -17,6 +17,9 @@ import (
 // configured (https://ai.google.dev/gemini-api/docs/embeddings).
 const DefaultEmbeddingModel = "gemini-embedding-2"
 
+// DefaultVertexEmbeddingModel is the model used by Vertex AI's predict API.
+const DefaultVertexEmbeddingModel = "gemini-embedding-001"
+
 // defaultEmbedBatch is the number of texts per batchEmbedContents request.
 // The API reference documents no limit; 100 keeps requests moderate.
 const defaultEmbedBatch = 100
@@ -76,16 +79,15 @@ type Embedder struct {
 	taskType   string
 	dimensions int
 	batchSize  int
+	vertex     bool
 }
 
 // NewEmbedder returns an Embedder. It takes the options of New: WithModel
-// selects the embedding model, DefaultEmbeddingModel by default. Vertex AI
-// serves embeddings through a different API and is not supported.
+// selects the embedding model. WithVertex selects Vertex AI's predict API,
+// DefaultVertexEmbeddingModel and a conservative one-input default batch size.
+// Other requests use DefaultEmbeddingModel and batchEmbedContents.
 func NewEmbedder(opts ...Option) (*Embedder, error) {
 	m := newModel(opts)
-	if m.vertex {
-		return nil, errors.New("gemini: the embedder supports the Gemini API, not Vertex AI")
-	}
 	if err := m.resolve(); err != nil {
 		return nil, err
 	}
@@ -94,9 +96,19 @@ func NewEmbedder(opts ...Option) (*Embedder, error) {
 			return nil, fmt.Errorf("gemini: unknown task type %q", m.taskType)
 		}
 	}
-	e := &Embedder{http: m.http, model: cmp.Or(m.model, DefaultEmbeddingModel), taskType: m.taskType, dimensions: m.dimensions, batchSize: m.batchSize}
+	defaultModel := DefaultEmbeddingModel
+	if m.vertex {
+		defaultModel = DefaultVertexEmbeddingModel
+	}
+	e := &Embedder{http: m.http, model: cmp.Or(m.model, defaultModel), taskType: m.taskType, dimensions: m.dimensions, batchSize: m.batchSize, vertex: m.vertex}
 	if e.batchSize <= 0 {
 		e.batchSize = defaultEmbedBatch
+		if e.vertex {
+			e.batchSize = 1
+		}
+	}
+	if e.vertex && e.batchSize > 250 {
+		return nil, errors.New("gemini: Vertex embedding batch size exceeds 250")
 	}
 	return e, nil
 }
@@ -136,12 +148,18 @@ func (e *Embedder) Embed(ctx context.Context, texts []string) ([][]float32, erro
 		if err != nil {
 			return nil, err
 		}
+		if e.vertex && len(out) > 0 && len(vecs[0]) != len(out[0]) {
+			return nil, errors.New("gemini: inconsistent Vertex embedding dimensions across batches")
+		}
 		out = append(out, vecs...)
 	}
 	return out, nil
 }
 
 func (e *Embedder) embed(ctx context.Context, texts []string) ([][]float32, error) {
+	if e.vertex {
+		return e.embedVertex(ctx, texts)
+	}
 	var cfg *embedConfig
 	prefix := ""
 	if e.taskType != "" || e.dimensions > 0 {
