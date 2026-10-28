@@ -6,6 +6,19 @@ applies here too: open an issue before a new feature or API change, keep
 pull requests to one change with tests, and report security issues
 privately (see [SECURITY.md](SECURITY.md)).
 
+Install [Task](https://taskfile.dev/docs/installation/) v3.53.1 outside the module,
+matching CI, and put its binary on `PATH`:
+
+```sh
+go install github.com/go-task/task/v3/cmd/task@v3.53.1
+```
+
+Public tasks are `check`, `test`, `build`, `lint`, `vulncheck`, `fmt`, `fix`
+and `tidy`. Bare `task` runs `check`. Validation helpers are internal; use
+`task check` to run them. Run `task --list` to discover the public tasks. Tool overrides accept environment variables or
+Task arguments, for example `task check GO="/path with spaces/go"`.
+Checks force `GOWORK=off`; `check`, `lint` and `vulncheck` do not apply source fixes.
+
 ## Modules
 
 Each top-level directory is a module, `github.com/nostosx/agentx-contrib/<dir>`.
@@ -26,9 +39,17 @@ can compose the core and multiple contrib modules. A new library module:
 
 ## Development
 
-Use Go 1.27.3, GNU Make, Bash and Python 3. A standalone checkout resolves
+The unreleased pgvector backend has a separate real-service gate:
+`AGENTX_IT_PGVECTOR_DSN=... task test INTEGRATION=true MODULES=pgvector`. Enable the vector
+extension in a disposable database first. For the document module use
+`AGENTX_IT_PDFTOTEXT=/absolute/path/to/pdftotext task test INTEGRATION=true MODULES=document`.
+Both reject missing configuration and skipped tests. Provider acceptance is
+explicitly opt-in: `go run ./cmd/providercheck -live -provider=... -model=...` from provider/.
+Ordinary tests and CI do not enable live provider calls.
+
+Use Go 1.27.3, Task v3.53.1 and Bash. A standalone checkout resolves
 agentx and kitx v1.0.0 through the Go module proxy. Run Go
-commands inside a module directory with `GOWORK=off`, or use the `Makefile`, which
+commands inside a module directory with `GOWORK=off`, or use the `Taskfile.yml`, which
 does so for every module. For linting, install golangci-lint v2.15.0 built
 with Go 1.27.3. Install both check tools outside the modules and put the Go
 bin directory on `PATH`:
@@ -38,32 +59,34 @@ go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
 ```
 
-Do not add these tools to library `go.mod` files. `make help` lists all targets.
+Do not add these tools to library `go.mod` files. `task --list` lists all targets.
 
 ```sh
-make check        # format, modernizer and tidy checks, vet, build, shuffled race tests
-make lint         # golangci-lint, including integration builds
-make vulncheck    # reachable vulnerability scans, including integration builds
-make test         # unit tests without the race detector
-make race         # race tests with shuffled execution order
-make integration  # sqlstore acceptance; requires both PostgreSQL and MySQL DSNs
-make check MODULES=provider  # select one module, or a quoted space-separated list
+task check        # format, modernizer and tidy checks, vet, build, shuffled race tests
+task lint         # golangci-lint, including integration builds
+task vulncheck    # reachable vulnerability scans, including integration builds
+task test         # module tests and tooling regression tests
+task test RACE=true  # include the race detector
+task test COVER=true  # race tests plus per-module coverage.out
+task test INTEGRATION=true MODULES=sqlstore  # requires PostgreSQL and MySQL DSNs
+task check MODULES=provider  # select one module, or a quoted space-separated list
 ```
 
-`make check` rejects formatting, modernizer and tidy differences without
-applying them. Use `make fmt`, `make fix` or `make tidy` explicitly, then
+`task check` rejects formatting, modernizer and tidy differences without
+applying them. Use `task fmt`, `task fix` or `task tidy` explicitly, then
 review the changes. Modernizer, vet, build, lint and vulnerability checks
 cover both default and integration builds. Unit race tests do not require
-external services. `make tooling-check` runs integration-gate regression
-fixtures without external services and is included in `make check`.
+external services. `task test` also runs integration-gate regression
+fixtures; `task check` reuses `task test RACE=true`.
+The validators and tooling regressions use only the Go standard library.
 `GO`, `GOFMT`, `GOLANGCI_LINT` and `GOVULNCHECK` can select installed executables.
 Direct tagged Go tests may skip a backend whose DSN is unset. The
-`make integration` gate requires both DSNs and rejects skipped or missing
+`task test INTEGRATION=true MODULES=sqlstore` gate requires both DSNs and rejects skipped or missing
 conformance suites; a skipped backend is not a successful acceptance run.
 
-CI runs `make check` per module on Linux, macOS and Windows, with independent
+CI runs `task check` per module on Linux, macOS and Windows, with independent
 lint and vulnerability jobs and a separate PostgreSQL/MySQL integration job.
-Run `make check`, `make lint` and `make vulncheck` before requesting review.
+Run `task check`, `task lint` and `task vulncheck` before requesting review.
 For service-dependent changes, run the applicable integration tests against
 disposable databases as described in the README. Never point them at shared
 or production data.

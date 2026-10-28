@@ -11,11 +11,73 @@ versions without replacements. See [RELEASING.md](RELEASING.md) for release gate
 
 ## Unreleased
 
+- Development tooling: expose only check, test, build, lint, vulncheck, fmt,
+  fix and tidy; make check the default and keep validation details internal.
+  Remove redundant all/help/fix-check/clean task wrappers.
+
+- Development tooling: consolidate unit, race, coverage, tooling regression and
+  service tests under `task test`; select variants with `RACE`, `COVER` and
+  `INTEGRATION`. `check` reuses the race variant. Live provider acceptance uses
+  its explicit CLI instead of an additional Task command.
+
+- Development tooling: replace Python integration validators and regression
+  fixtures with Go standard-library tools; no Python runtime is required.
+
+- Development tooling (all modules): replace Make entry points with Task v3.53.1 in local
+  checks, CI and contribution/release instructions. Use `task check`, `task lint`
+  and `task vulncheck`; check coverage, build tags and failure gates are preserved.
+
 - Document standalone module installation and a runnable file-store quick start.
 - Clarify filestore revision-check, snapshot and lock-file ownership boundaries
   when multiple instances or processes access the same paths.
 - Correct sqlstore transaction guidance: store operations can execute multiple
   statements and join a transaction only when the caller provides one.
+
+## provider/v1.2.0
+
+Release date: 2026-10-28. Requires agentx v1.2.1.
+
+- Add Vertex AI predict embeddings, Bedrock Titan embeddings and a Cohere
+  reranker. Preserve ordinary constructor injection and local fixture tests.
+- Add an explicit live acceptance command with bounded requests, required model
+  selection and structured verified/unverified reports. Ordinary CI does not
+  establish live model compatibility or make paid provider requests.
+
+## sqlstore/v1.1.0
+
+Release date: 2026-10-28. Requires agentx v1.2.1.
+
+- Add encrypted MCP TokenStore with explicit user/trust-domain namespace,
+  injected authenticated encryption and atomic credential replacement.
+- Migrate creates the mcp_credentials table. OAuth refresh coordination remains
+  application-owned; operations join a transaction only when one is supplied.
+- Require all ten SQL conformance suite/backend combinations before publication.
+
+## document/v1.0.0
+
+Release date: 2026-10-28. Requires agentx v1.2.1.
+
+- Add bounded DOCX parsing and explicit Poppler pdftotext-backed PDF parsing,
+  with cancellation, source/page metadata and a caller-supplied OCR fallback.
+- Keep textless pages visible and return ErrNoText for wholly textless inputs.
+  A real converter integration gate is required before publication.
+
+## pgvector/v1.0.0
+
+Release date: 2026-10-28. Requires agentx v1.2.1.
+
+- Add PostgreSQL RAG source replacement, namespace-filtered exact cosine search,
+  memory storage and database-side retrieval. Own tables and migrations remain
+  separate from other contrib modules.
+- Require real PostgreSQL/vector-extension conformance before publication.
+
+## s3/v1.0.0
+
+Release date: 2026-10-28. Requires agentx v1.2.1.
+
+- Add an AWS SDK v2 document loader with an injected client and parsers,
+  pagination, conditional reads, bounded downloads and all-or-nothing failures.
+- Tests use local fixtures; no live bucket or model access is required.
 
 ## provider/v1.1.0
 

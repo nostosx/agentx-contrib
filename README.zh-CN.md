@@ -17,31 +17,37 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 | 模块 | 包 | 实现 | 第三方依赖 |
 | --- | --- | --- | --- |
-| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`、`provider/anthropic`、`provider/gemini`、`provider/bedrock` | `model.Model`；`memory.Embedder`（`openai`、`gemini`） | `github.com/nostosx/kitx/dataurl`、`github.com/nostosx/kitx/utf8text` |
+| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`、`provider/anthropic`、`provider/gemini`、`provider/bedrock`、`provider/cohere` | `model.Model`；`memory.Embedder`（OpenAI、Gemini/Vertex、Bedrock Titan）；`rag.Reranker`（Cohere） | `github.com/nostosx/kitx/dataurl`、`github.com/nostosx/kitx/utf8text` |
 | `github.com/nostosx/agentx-contrib/otel` | `otel` | 基于 OpenTelemetry 的 `telemetry.Tracer` 和 `telemetry.Meter` | `go.opentelemetry.io/otel` 及其 `trace`、`metric` 和 `log` API（SDK 仅用于测试） |
-| `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | SQLite、PostgreSQL 和 MySQL 上的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer` 和 `memory.Store` | 包本身无；测试使用 `modernc.org/sqlite`、`github.com/jackc/pgx/v5` 和 `github.com/go-sql-driver/mysql` |
+| `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | SQLite、PostgreSQL 和 MySQL 上的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store` 和加密 `mcp.TokenStore` | 包本身无；测试使用 `modernc.org/sqlite`、`github.com/jackc/pgx/v5` 和 `github.com/go-sql-driver/mysql` |
 | `github.com/nostosx/agentx-contrib/filestore` | `filestore` | 基于 JSON 文件的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store`、`rag.VectorStore` 和 `mcp.TokenStore` | `github.com/nostosx/kitx/atomicfile` |
 | `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`、`middleware/retry` | `loop.Middleware`、模型和工具装饰器，以及带重试的 `memory.Embedder` | 无 |
+| `github.com/nostosx/agentx-contrib/pgvector` | `pgvector` | PostgreSQL 上的 `rag.VectorStore`、`memory.Store` 和数据库端 `memory.Retriever`，支持命名空间隔离 | 库代码仅使用 `database/sql`；集成测试使用 pgx |
+| `github.com/nostosx/agentx-contrib/document` | `document` | PDF、DOCX 的 `rag.Parser`，保留来源与页码等元数据 | PDF 需要应用安装 `pdftotext`；DOCX 使用标准库 |
+| `github.com/nostosx/agentx-contrib/s3` | `s3` | 分页加载 S3 文档的 `rag.Loader`，复用应用配置的 Parser | AWS SDK for Go v2 S3 |
 
 上表列出各模块直接使用的外部依赖，不重复列出共同依赖的 agentx。
 所有模块都会通过 agentx 间接依赖 kitx；“无”表示没有额外的直接外部依赖。
 
 ## 安装
 
-各模块独立发布版本。`provider`、`middleware` 和 `otel` v1.1.0 需要 agentx v1.1.0；
-`filestore` 和 `sqlstore` v1.0.0 需要 agentx v1.0.0，也能与 v1.1.0 一起构建。所有模块
-都使用已发布的 kitx v1.0.0。
-按应用所需安装对应模块即可。Go 1.27.3 是工具链要求，与模块版本独立。
+2026-10-28 发布 provider v1.2.0、sqlstore v1.1.0，以及 document、pgvector、s3
+的首个 v1.0.0，均需要 agentx v1.2.1。middleware、otel 保持 v1.1.0，filestore
+保持 v1.0.0。各模块独立发布，依赖均通过公开代理解析，无需本地替换。
+只安装应用需要的模块；本仓库根目录不是 Go 模块。
 
 在应用的 Go 模块内执行这些命令。新建应用时，先创建目录并在其中运行
 `go mod init example.com/agentx-app`。本仓库根目录不是可安装的模块。
 
 ```sh
-go get github.com/nostosx/agentx@v1.1.0 github.com/nostosx/agentx-contrib/provider@v1.1.0
+go get github.com/nostosx/agentx@v1.2.1 github.com/nostosx/agentx-contrib/provider@v1.2.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # 文件存储
-go get github.com/nostosx/agentx-contrib/sqlstore@v1.0.0      # SQL 存储
+go get github.com/nostosx/agentx-contrib/sqlstore@v1.1.0      # SQL 存储
 go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # 日志和重试
 go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
+go get github.com/nostosx/agentx-contrib/document@v1.0.0
+go get github.com/nostosx/agentx-contrib/pgvector@v1.0.0
+go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 ```
 
 每个模块单独发布版本，标签形如 `<dir>/vX.Y.Z`，例如 `provider/v1.0.0`。
@@ -109,7 +115,9 @@ func main() {
 `"bedrock"`）传入，每个适配器只把自己的选项合并进请求体。`agent.WithSeed` 由 OpenAI
 Chat Completions 和 Gemini 发送，其他适配器忽略。
 
-这些 Provider 是用模拟 API 的本地服务器测试的。尚未验证真实 API 的兼容性；如果 API 拒绝了某个请求，请提交 issue。
+普通 Provider 测试使用本地模拟 API，不能证明真实 API 的兼容性。
+[Provider 验收入口](provider/README.md) 可显式启用真实 API 检查，记录模型、时间及逐项结果；
+未启用或缺少凭据时返回 `unverified` 并非零退出。普通测试和 CI 不调用付费 API。
 
 ```go
 m, err := anthropic.New() // 读取 ANTHROPIC_API_KEY
@@ -216,7 +224,8 @@ agentx 的消息和工具结果可以携带图片、文档、音频和视频（�
 `gemini.NewEmbedder`（`batchEmbedContents`）为 agentx 的 `memory` 和 `rag` 包
 实现 `memory.Embedder`。它们接受 `New` 的选项：`WithModel` 选择向量模型，
 `WithDimensions` 和 `WithBatchSize` 可选。Gemini 可以为查询和存储的条目使用
-不同的任务类型；不支持 Vertex AI 的向量接口。`retry.Embedder` 像重试模型调用
+不同的任务类型。provider v1.2.0 还支持 Vertex AI predict 和 Bedrock Titan Embedding；
+具体选项及限制见 [Provider README](provider/README.md)。`retry.Embedder` 像重试模型调用
 一样重试它们：
 
 ```go
@@ -229,6 +238,14 @@ mem := memory.New(store,
 ```
 
 ## 存储
+
+[pgvector 模块](pgvector/README.md) 提供数据库端余弦精确检索，覆盖 RAG
+向量存储及长期记忆检索。每个命名空间隔离记录，按来源原子替换；不会自动安装 PostgreSQL
+扩展或创建 ANN 索引。它不依赖 `sqlstore`，应用自行组合所需存储。
+
+文档导入可组合 [PDF/DOCX 解析器](document/README.md) 与 [S3 Loader](s3/README.md)。
+PDF 通过应用安装的 `pdftotext` 提取文字；全无文本时明确失败，只有显式配置的 OCR
+Parser 才会接管。DOCX 不伪造渲染页码。专用重排见 [Provider 模块](provider/README.md)。
 
 ### 文件存储
 
@@ -275,6 +292,11 @@ cfg := &mcp.OAuthConfig{Store: filestore.MCPTokens(".agentx/mcp-tokens.json")}
 ```
 
 ### SQL 存储
+
+sqlstore v1.1.0 起的 `sqlstore.MCPTokens(db, namespace, aead, opts...)` 还可保存 MCP OAuth
+Token 和客户端注册信息。必须传入用户/租户命名空间及认证加密实现；数据库只保存密文。
+它不会自动协调多个实例刷新同一个 OAuth Token。装配和密钥管理见
+[SQL 存储 README](sqlstore/README.md)。
 
 `sqlstore` 通过 `database/sql` 把会话、运行检查点、Workflow 检查点和记忆
 保存在 SQLite、PostgreSQL 或 MySQL（以及 MariaDB 等兼容服务）中。它不引入
@@ -385,35 +407,36 @@ provider 和文件存储模块。目录布局、Provider 环境变量及 `cmd/` 
 
 ## 开发
 
-使用 Go 1.27.3、GNU Make、Bash 和 Python 3。仓库根目录不是模块，也没有提交 `go.work`。
+使用 Go 1.27.3、Task v3.53.1 和 Bash。仓库根目录不是模块，也没有提交 `go.work`。
 独立检出本仓库即可，已发布的 agentx 和 kitx 版本均由 Go 模块代理下载，无需同级源码。
-所有 Make 入口设置 `GOWORK=off`。
+所有 Task 入口设置 `GOWORK=off`。
 
 ```sh
-make check        # 格式、现代化、tidy 检查、vet、构建、随机顺序 race 测试
-make lint         # golangci-lint，包含 integration 构建
-make vulncheck    # 可达漏洞扫描，包含 integration 构建
-make test         # 普通单元测试
-make race         # 随机顺序 race 测试
-make integration  # sqlstore 验收；PostgreSQL 和 MySQL DSN 必须同时配置
-make check MODULES=provider  # 只检查指定模块；多个名称用引号包裹并以空格分隔
+task check        # 格式、现代化、tidy 检查、vet、构建、随机顺序 race 测试
+task lint         # golangci-lint，包含 integration 构建
+task vulncheck    # 可达漏洞扫描，包含 integration 构建
+task test         # 模块测试及工具回归测试
+task test RACE=true  # 开启 race 检测
+task test COVER=true  # race 测试并生成各模块 coverage.out
+task test INTEGRATION=true MODULES=sqlstore  # PostgreSQL 和 MySQL DSN 必须同时配置
+task check MODULES=provider  # 只检查指定模块；多个名称用引号包裹并以空格分隔
 ```
 
-`make help` 列出全部入口。`check` 只检查，不应用格式、现代化或 tidy 修改；
-需要修改时显式运行 `make fmt`、`make fix` 或 `make tidy`，然后审阅差异。
+`task --list` 列出全部入口。`check` 只检查，不应用格式、现代化或 tidy 修改；
+需要修改时显式运行 `task fmt`、`task fix` 或 `task tidy`，然后审阅差异。
 现代化、vet、构建、lint 和漏洞扫描都覆盖默认及 integration 构建。
-CI 按模块在 Linux、macOS 和 Windows 上运行 `make check`，lint、漏洞扫描和
+CI 按模块在 Linux、macOS 和 Windows 上运行 `task check`，lint、漏洞扫描和
 双数据库集成测试独立运行。
 
 `sqlstore` 的普通测试使用 SQLite，不需要外部服务。带 `integration` 标签运行时，
 还会访问配置了 DSN 的 PostgreSQL 和 MySQL；直接运行 Go 测试时未配置的后端会
-被跳过。`make integration` 则要求同时提供两个 DSN，并拒绝跳过或缺失一致性测试的
+被跳过。`task test INTEGRATION=true MODULES=sqlstore` 则要求同时提供两个 DSN，并拒绝跳过或缺失一致性测试的
 结果。请使用独立的临时数据库，测试会创建和删除表：
 
 ```sh
 export AGENTX_IT_POSTGRES_DSN='postgres://agentx:agentx@localhost:5432/agentx_test'
 export AGENTX_IT_MYSQL_DSN='agentx:agentx@tcp(localhost:3306)/agentx_test'
-make integration MODULES=sqlstore
+task test INTEGRATION=true MODULES=sqlstore
 ```
 
 工具安装和贡献要求见 [CONTRIBUTING.md](CONTRIBUTING.md)；漏洞报告见

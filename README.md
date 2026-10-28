@@ -21,11 +21,14 @@ imports.
 
 | Module | Packages | Implements | Third-party dependencies |
 | --- | --- | --- | --- |
-| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`, `provider/anthropic`, `provider/gemini`, `provider/bedrock` | `model.Model`; `memory.Embedder` (`openai`, `gemini`) | `github.com/nostosx/kitx/dataurl`, `github.com/nostosx/kitx/utf8text` |
+| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`, `provider/anthropic`, `provider/gemini`, `provider/bedrock`, `provider/cohere` | `model.Model`; `memory.Embedder` (OpenAI, Gemini/Vertex, Bedrock Titan); `rag.Reranker` (Cohere) | `github.com/nostosx/kitx/dataurl`, `github.com/nostosx/kitx/utf8text` |
 | `github.com/nostosx/agentx-contrib/otel` | `otel` | `telemetry.Tracer` and `telemetry.Meter` over OpenTelemetry | `go.opentelemetry.io/otel` with its `trace`, `metric` and `log` APIs (the SDK only in tests) |
-| `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer` and `memory.Store` on SQLite, PostgreSQL and MySQL | none in the package; its tests use `modernc.org/sqlite`, `github.com/jackc/pgx/v5` and `github.com/go-sql-driver/mysql` |
+| `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store` and encrypted `mcp.TokenStore` on SQLite, PostgreSQL and MySQL | none in the package; its tests use `modernc.org/sqlite`, `github.com/jackc/pgx/v5` and `github.com/go-sql-driver/mysql` |
 | `github.com/nostosx/agentx-contrib/filestore` | `filestore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store`, `rag.VectorStore` and `mcp.TokenStore` in JSON files | `github.com/nostosx/kitx/atomicfile` |
 | `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`, `middleware/retry` | `loop.Middleware`, model and tool decorators and a retrying `memory.Embedder` | none |
+| `github.com/nostosx/agentx-contrib/pgvector` | `pgvector` | PostgreSQL `rag.VectorStore`, `memory.Store` and database-side `memory.Retriever`, with namespace isolation | library uses `database/sql`; integration tests use pgx |
+| `github.com/nostosx/agentx-contrib/document` | `document` | PDF and DOCX `rag.Parser` implementations with source metadata | PDF requires an application-installed `pdftotext`; DOCX uses the standard library |
+| `github.com/nostosx/agentx-contrib/s3` | `s3` | Paginated S3 document `rag.Loader` using application-provided parsers | AWS SDK for Go v2 S3 |
 
 The table lists each module's direct external dependencies, omitting the
 shared agentx dependency. Every module also depends on kitx through agentx;
@@ -33,22 +36,25 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-Modules are versioned independently. `provider`, `middleware` and `otel`
-v1.1.0 require agentx v1.1.0; `filestore` and `sqlstore` v1.0.0 require agentx
-v1.0.0 and also build with v1.1.0. All use the published kitx v1.0.0. Install
-only the modules your application needs. Go 1.27.3 is
-the toolchain requirement; module versions are maintained independently.
+The 2026-10-28 releases are provider v1.2.0, sqlstore v1.1.0 and the initial
+v1.0.0 releases of document, pgvector and s3. They require agentx v1.2.1.
+Middleware and otel remain at v1.1.0; filestore remains at v1.0.0. All resolve
+published dependencies without replacements. Install only the modules your
+application needs; the repository root is not a module.
 
 Run these commands inside your application's Go module. For a new application,
 create a directory and run `go mod init example.com/agentx-app` there first.
 The repository root is not an installable module.
 
 ```sh
-go get github.com/nostosx/agentx@v1.1.0 github.com/nostosx/agentx-contrib/provider@v1.1.0
+go get github.com/nostosx/agentx@v1.2.1 github.com/nostosx/agentx-contrib/provider@v1.2.0
 go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # file stores
-go get github.com/nostosx/agentx-contrib/sqlstore@v1.0.0      # SQL stores
+go get github.com/nostosx/agentx-contrib/sqlstore@v1.1.0      # SQL stores
 go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # logging and retries
 go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
+go get github.com/nostosx/agentx-contrib/document@v1.0.0
+go get github.com/nostosx/agentx-contrib/pgvector@v1.0.0
+go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 ```
 
 Each module is versioned on its own, with tags of the form
@@ -120,9 +126,11 @@ media. For request fields specific to one provider, use
 options into the request body. `agent.WithSeed` is sent by OpenAI Chat
 Completions and Gemini and ignored by the others.
 
-The providers are tested against local servers that mimic the APIs.
-They have not been verified against live APIs;
-please report a request the API rejects.
+Ordinary provider tests use local servers that mimic the APIs and do not
+verify live compatibility. The [acceptance command](provider/README.md)
+explicitly opts into live checks and records individual results; absent
+credentials or disabled live access returns unverified with a nonzero exit.
+Ordinary tests and CI never enable paid provider requests.
 
 ```go
 m, err := anthropic.New() // reads ANTHROPIC_API_KEY
@@ -239,13 +247,17 @@ agentx messages and tool results carry images, documents, audio and video
 
 ### Embedders
 
+Provider v1.2.0 also supports Vertex AI predict and Bedrock Titan
+embeddings, plus a Cohere `rag.Reranker`. See [Provider README](provider/README.md)
+for options and the bounded, explicitly enabled live acceptance command.
+
 `openai.NewEmbedder` (`/embeddings`, including compatible services such as
 `openai.Ollama()`) and `gemini.NewEmbedder` (`batchEmbedContents`)
 implement `memory.Embedder` for agentx's `memory` and `rag` packages. They
 take the options of `New`; `WithModel` selects the embedding model, and
 `WithDimensions` and `WithBatchSize` are optional. Gemini can embed queries
-and stored entries for different tasks; Vertex AI embeddings are not
-supported. `retry.Embedder` retries them like model calls:
+and stored entries for different tasks. Provider v1.2.0 supports
+Vertex AI embeddings too. `retry.Embedder` retries them like model calls:
 
 ```go
 docs, _ := gemini.NewEmbedder(gemini.WithTaskType(gemini.TaskRetrievalDocument))
@@ -257,6 +269,13 @@ mem := memory.New(store,
 ```
 
 ## Storage
+
+The [pgvector backend](pgvector/README.md) provides namespace-filtered
+database-side exact cosine retrieval for RAG and long-term memory. It owns
+separate tables, never imports sqlstore, and does not install the vector
+extension or create approximate indexes automatically. See also the
+[document parsers](document/README.md), [S3 loader](s3/README.md) and
+[Provider acceptance and reranking](provider/README.md).
 
 ### File storage
 
@@ -310,6 +329,11 @@ cfg := &mcp.OAuthConfig{Store: filestore.MCPTokens(".agentx/mcp-tokens.json")}
 ```
 
 ### SQL storage
+
+Since sqlstore v1.1.0, `sqlstore.MCPTokens(db, namespace, aead, opts...)` stores MCP
+OAuth tokens and client registrations with required authenticated encryption
+and per-user/trust-domain namespaces. The application coordinates refreshes
+across replicas. See [SQL store README](sqlstore/README.md) for key ownership.
 
 `sqlstore` keeps sessions, run checkpoints, workflow checkpoints and
 memories in SQLite, PostgreSQL or MySQL (and compatible servers such as
@@ -431,37 +455,38 @@ setup, provider environment variables and commands under `cmd/`.
 
 ## Development
 
-Use Go 1.27.3, GNU Make, Bash and Python 3. Clone this repository on its own;
+Use Go 1.27.3, Task v3.53.1 and Bash. Clone this repository on its own;
 the published agentx and kitx versions download through the Go module proxy. The root is not a
-module, and no `go.work` is committed. All Make targets set `GOWORK=off`.
+module, and no `go.work` is committed. All Task targets set `GOWORK=off`.
 
 ```sh
-make check        # format, modernizer and tidy checks, vet, build, shuffled race tests
-make lint         # golangci-lint, including integration builds
-make vulncheck    # reachable vulnerability scans, including integration builds
-make test         # unit tests without the race detector
-make race         # race tests with shuffled execution order
-make integration  # sqlstore acceptance; requires both PostgreSQL and MySQL DSNs
-make check MODULES=provider  # select a module, or a quoted space-separated list
+task check        # format, modernizer and tidy checks, vet, build, shuffled race tests
+task lint         # golangci-lint, including integration builds
+task vulncheck    # reachable vulnerability scans, including integration builds
+task test         # module tests and tooling regression tests
+task test RACE=true  # include the race detector
+task test COVER=true  # race tests plus per-module coverage.out
+task test INTEGRATION=true MODULES=sqlstore  # requires PostgreSQL and MySQL DSNs
+task check MODULES=provider  # select a module, or a quoted space-separated list
 ```
 
-`make help` lists all targets. `check` rejects formatting, modernizer and tidy
-differences without applying them. Use `make fmt`, `make fix` or `make tidy`
+`task --list` lists all targets. `check` rejects formatting, modernizer and tidy
+differences without applying them. Use `task fmt`, `task fix` or `task tidy`
 explicitly, then review the changes. Modernizer, vet, build, lint and
 vulnerability checks cover both default and integration builds. CI runs
-`make check` per module on Linux, macOS and Windows, with independent lint,
+`task check` per module on Linux, macOS and Windows, with independent lint,
 vulnerability and dual-database integration jobs.
 
 The ordinary `sqlstore` tests use SQLite and need no external service.
 With `integration` tags, tests also use PostgreSQL and MySQL when their DSNs
 are set; directly running tagged Go tests skips an unset backend. The
-`make integration` gate requires both DSNs and rejects skipped or missing
+`task test INTEGRATION=true MODULES=sqlstore` gate requires both DSNs and rejects skipped or missing
 conformance suites. Use disposable databases: the tests create and drop tables.
 
 ```sh
 export AGENTX_IT_POSTGRES_DSN='postgres://agentx:agentx@localhost:5432/agentx_test'
 export AGENTX_IT_MYSQL_DSN='agentx:agentx@tcp(localhost:3306)/agentx_test'
-make integration MODULES=sqlstore
+task test INTEGRATION=true MODULES=sqlstore
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for tool setup and contribution

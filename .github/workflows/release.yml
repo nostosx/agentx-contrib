@@ -9,7 +9,7 @@ on:
         description: Module to release
         required: true
         type: choice
-        options: [filestore, middleware, otel, provider, sqlstore]
+        options: [document, filestore, middleware, otel, pgvector, provider, s3, sqlstore]
       version:
         description: Version to release, such as v1.0.0
         required: true
@@ -47,6 +47,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Install Task
+        uses: go-task/setup-task@v2
+        with:
+          version: '3.53.1'
       - uses: actions/setup-go@v7
         with:
           go-version-file: ${{ inputs.module }}/go.mod
@@ -79,19 +83,67 @@ jobs:
           awk -v v="$tag" '/^## /{p = ($2 == v); next} p' ../CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           grep -q . "$RUNNER_TEMP/notes.md" || { echo "CHANGELOG.md has no section ## $tag"; exit 1; }
       - name: Verify selected module
-        run: make -C .. check MODULES="$MODULE"
+        run: task --dir .. check MODULES="$MODULE"
       - uses: golangci/golangci-lint-action@v9
         with:
           install-mode: goinstall
           version: v2.15.0
           install-only: true
-      - run: make -C .. lint MODULES="$MODULE"
+      - run: task --dir .. lint MODULES="$MODULE"
       - name: Install scanner outside the module
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
-      - run: make -C .. vulncheck MODULES="$MODULE"
-      - name: Integration configuration tests
-        if: inputs.module != 'sqlstore'
-        run: go test -race -shuffle=on -count=1 -tags integration ./...
+      - run: task --dir .. vulncheck MODULES="$MODULE"
+
+  document-integration:
+    if: inputs.module == 'document'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: go-task/setup-task@v2
+        with:
+          version: '3.53.1'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: document/go.mod
+          cache-dependency-path: document/go.sum
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: Real PDF conversion without skips
+        env:
+          AGENTX_IT_PDFTOTEXT: /usr/bin/pdftotext
+        run: task test INTEGRATION=true MODULES=document
+
+  pgvector-integration:
+    if: inputs.module == 'pgvector'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: agentx
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: go-task/setup-task@v2
+        with:
+          version: '3.53.1'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: pgvector/go.mod
+          cache-dependency-path: pgvector/go.sum
+      - name: Enable vector extension in disposable database
+        run: docker exec "${{ job.services.postgres.id }}" psql -U postgres -d agentx -c 'CREATE EXTENSION vector'
+      - name: Real pgvector acceptance without skips
+        env:
+          AGENTX_IT_PGVECTOR_DSN: postgres://postgres@localhost:5432/agentx?sslmode=disable
+        run: task test INTEGRATION=true MODULES=pgvector
 
   sqlstore-integration:
     if: inputs.module == 'sqlstore'
@@ -123,6 +175,10 @@ jobs:
         working-directory: sqlstore
     steps:
       - uses: actions/checkout@v7
+      - name: Install Task
+        uses: go-task/setup-task@v2
+        with:
+          version: '3.53.1'
       - uses: actions/setup-go@v7
         with:
           go-version-file: sqlstore/go.mod
@@ -131,13 +187,15 @@ jobs:
         env:
           AGENTX_IT_POSTGRES_DSN: postgres://postgres:agentx@localhost:5432/agentx?sslmode=disable
           AGENTX_IT_MYSQL_DSN: root:agentx@tcp(localhost:3306)/agentx
-        run: make -C .. integration MODULES=sqlstore
+        run: task --dir .. test INTEGRATION=true MODULES=sqlstore
 
   release:
-    needs: [verify, sqlstore-integration]
+    needs: [verify, sqlstore-integration, pgvector-integration, document-integration]
     if: >-
       ${{ !cancelled() && needs.verify.result == 'success' &&
-          (inputs.module != 'sqlstore' || needs.sqlstore-integration.result == 'success') }}
+          (inputs.module != 'sqlstore' || needs.sqlstore-integration.result == 'success') &&
+          (inputs.module != 'pgvector' || needs.pgvector-integration.result == 'success') &&
+          (inputs.module != 'document' || needs.document-integration.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

@@ -29,12 +29,12 @@ until that version is available from the Go module proxy.
    explicit module licenses also cover archives made directly from a module
    directory. The release workflow checks that the selected module's license
    matches the root license.
-3. Run `make check`, `make lint` and `make vulncheck`. Use `MODULES=sqlstore`
+3. Run `task check`, `task lint` and `task vulncheck`. Use `MODULES=sqlstore`
    (or another module name) to limit the module gates to the selected release.
    For SQL storage, start disposable
    PostgreSQL 17 and MySQL 8.4 databases, set both `AGENTX_IT_POSTGRES_DSN`
    and `AGENTX_IT_MYSQL_DSN` as described in the README, and run
-   `make integration`. This gate requires both DSNs and verifies all eight
+   `task test INTEGRATION=true MODULES=sqlstore`. This gate requires both DSNs and verifies all ten
    suite/backend combinations without skips; directly running tagged Go tests
    can skip an unset backend and is not equivalent acceptance.
 4. Review and merge the changes before starting **Release** from `main`.
@@ -58,16 +58,27 @@ Run the **Release** workflow once per module, choosing the module and version.
 It validates the changelog, module license and versions; rejects replacements
 and unreleased core/kitx requirements; and runs the same formatting, tidy, vet, modernizer,
 build, shuffled race-test, lint and vulnerability gates as CI. The selected
-module passes `make check` on Linux, macOS and Windows. Modernizer, vet,
+module passes `task check` on Linux, macOS and Windows. Modernizer, vet,
 build, lint and vulnerability checks cover integration builds too.
-Non-SQL modules also run race tests with `-tags integration`.
+Modules without service fixtures also run race tests with integration tags.
+pgvector requires its own real-backend gate, described below.
 
 For `sqlstore`, a separate required job starts real PostgreSQL 17 and MySQL
 8.4 services and runs `go test -count=1 -race -shuffle=on -tags integration -json ./...`.
 Both DSNs are mandatory. The job rejects skipped tests and requires passing
-session, loop-checkpoint, workflow-checkpoint and memory conformance suites on
+session, loop-checkpoint, workflow-checkpoint, memory and MCP token suites on
 both servers. Failed or skipped SQL acceptance prevents publication. Other
-modules do not need those services.
+modules do not need those services. For pgvector, a required job enables the
+vector extension in a disposable PostgreSQL service and runs
+`task test INTEGRATION=true MODULES=pgvector`, rejecting missing, failed or skipped suites.
+The pgvector, document and s3 modules have independent versions; each release
+must pass its applicable checks before publication.
+
+For document, another required job installs Poppler in its disposable runner
+and executes `task test INTEGRATION=true MODULES=document` with an explicit pdftotext
+path. A skipped converter test does not permit publication. Live provider
+acceptance is an independent explicit operation; local fixture success does
+not establish compatibility with a particular live model.
 
 Only after every applicable job passes does the publishing job create
 `<module>/vA.B.C` at the checked commit and warm the public Go module proxy.
