@@ -1,6 +1,6 @@
-// Package document provides agentx RAG parsers for DOCX and PDF documents.
-// DOCX uses the Go standard library. PDF calls an explicitly configurable
-// pdftotext executable, without a shell. No converter is downloaded or
+// Package document provides agentx RAG parsers for DOCX, PDF, XLSX and images.
+// DOCX uses the standard library, XLSX uses Excelize, and PDF/OCR use explicitly
+// configurable Poppler/Tesseract executables without a shell. No converter is
 // installed automatically and no document is sent to a remote service.
 package document
 
