@@ -12,9 +12,23 @@ case "$module" in
     pattern='^TestIntegration' ;;
   document)
     : "${AGENTX_IT_PDFTOTEXT:?document requires an explicit pdftotext executable}"
+    : "${AGENTX_IT_TESSERACT:?document requires an explicit tesseract executable}"
+    : "${AGENTX_IT_PDFTOPPM:?document requires an explicit pdftoppm executable}"
     test -x "$AGENTX_IT_PDFTOTEXT"
+    test -x "$AGENTX_IT_TESSERACT"
+    test -x "$AGENTX_IT_PDFTOPPM"
     pattern='^TestIntegration' ;;
-  *) echo 'Select sqlstore, pgvector or document for integration acceptance' >&2; exit 1 ;;
+  retrieval)
+    : "${AGENTX_IT_QDRANT_URL:?retrieval requires a disposable Qdrant endpoint}"
+    : "${AGENTX_IT_ELASTICSEARCH_URL:?retrieval requires a disposable Elasticsearch endpoint}"
+    pattern='^TestIntegration' ;;
+  debug)
+    : "${AGENTX_IT_NODE:?debug requires an explicit Node executable}"
+    : "${AGENTX_IT_PLAYWRIGHT:?debug requires the installed Playwright module entry}"
+    test -x "$AGENTX_IT_NODE"
+    test -f "$AGENTX_IT_PLAYWRIGHT"
+    pattern='^TestIntegrationBrowser$' ;;
+  *) echo 'Select sqlstore, pgvector, document, retrieval or debug for integration acceptance' >&2; exit 1 ;;
 esac
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 result="$(mktemp)"

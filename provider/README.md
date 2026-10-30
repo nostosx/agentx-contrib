@@ -5,7 +5,7 @@ Gemini/Vertex AI and Amazon Bedrock Converse adapters. The normal tests use loca
 HTTP fixtures; they do not contact a provider or prove current live API behavior.
 
 Independent image generation/editing is available through
-`openai.NewImageGenerator` and `gemini.NewImageGenerator`; see [IMAGES.md](IMAGES.md) for the unreleased
+`openai.NewImageGenerator` and `gemini.NewImageGenerator`; see [IMAGES.md](IMAGES.md) for the published
 contracts, GPT Image 2.5 examples, Agent tools and explicit live acceptance.
 
 ## Explicit live acceptance

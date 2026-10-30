@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/nostosx/agentx v1.2.1 h1:ts1HlGzOKzNEgoqO0Af4WMKKlVUhQHFYUDI3pu7EhhI=
-github.com/nostosx/agentx v1.2.1/go.mod h1:B4jFEqH9+1B8Dc+AeU7PIHq2dg0rqFoS0QqHZSmAly0=
+github.com/nostosx/agentx v1.3.0 h1:F5iruF7GXmEWoV30PSCLcPT1tdr2UytHhKqrcZdZIac=
+github.com/nostosx/agentx v1.3.0/go.mod h1:B4jFEqH9+1B8Dc+AeU7PIHq2dg0rqFoS0QqHZSmAly0=
 github.com/nostosx/kitx v1.0.0 h1:EMfdh57DXbW+FPZD9/e+Mrxju1qx6EyEjrotpR+nso0=
 github.com/nostosx/kitx v1.0.0/go.mod h1:zNZAYv7ZyA2UkijHptpgnsSQKMmWIHp9E0e2TGBgDZE=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

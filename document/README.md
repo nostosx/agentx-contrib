@@ -1,7 +1,7 @@
 # document
 
 `github.com/nostosx/agentx-contrib/document` provides `rag.Parser` adapters
-for DOCX, PDF, XLSX and OCR inputs. Requires Go 1.27.3. XLSX and OCR are unreleased.
+for DOCX, PDF, XLSX and OCR inputs. Requires Go 1.27.3. XLSX and OCR are included in v1.1.0.
 
 | Parser | Implementation | Runtime dependency |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ Missing configuration skips the integration test in direct Go runs; skipping
 does not prove converter compatibility. It uses generated, local PDF fixtures
 and no network or production files. The Task gate rejects missing tools or skips.
 
-## XLSX (unreleased)
+## XLSX
 
 `XLSX{}` returns one tab-separated document per nonempty visible worksheet,
 with `sheet` and `rows` metadata. IDs append an escaped `#sheet=` name to
@@ -126,7 +126,7 @@ The fixed commit resolves through the public Go proxy with real checksums.
 Reassess this pin when a fixed stable release is available; do not downgrade
 to the vulnerable tag solely to avoid a pseudo-version.
 
-## Local OCR (unreleased)
+## Local OCR
 
 ```go
 ocr := document.Tesseract{Command: "/usr/bin/tesseract", Languages: "eng+chi_sim"}

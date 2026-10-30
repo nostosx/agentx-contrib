@@ -6,38 +6,75 @@ public API; minor releases may contain breaking changes, each marked with its
 migration. Record subsequent changes under `Unreleased`, identifying the
 module.
 
-All modules require Go 1.27.3 or later and use published agentx and kitx
-versions without replacements. See [RELEASING.md](RELEASING.md) for release gates.
+All modules require Go 1.27.3 or later. Released modules use published agentx
+and kitx versions without replacements; unreleased capabilities may require
+matching development sources. See [RELEASING.md](RELEASING.md) for release gates.
 
 ## Unreleased
 
-- Normalize native Windows glob path separators before stripping go.mod in Task
-  module discovery, and include the available modules in selection diagnostics.
+## artifact/v1.0.0
 
-- Normalize CRLF output from Windows module discovery before validating Task
-  selections; preserve rejection of empty, unknown and outside module paths.
+Release date: 2026-10-31. Requires agentx v1.3.0.
 
-- Development tooling: expose only check, test, build, lint, vulncheck, fmt,
-  fix and tidy; make check the default and keep validation details internal.
-  Remove redundant all/help/fix-check/clean task wrappers.
+- Add scoped artifact.Store persistence over the existing servex S3 Store, bounded single-object envelopes, atomic replacement and standard error identity. Applications own SDK clients, authorization and lifetimes.
+- Require published agentx v1.3.0 and servex-contrib/storage/s3 v1.0.0; use real public checksums without source replacements.
 
-- Development tooling: consolidate unit, race, coverage, tooling regression and
-  service tests under `task test`; select variants with `RACE`, `COVER` and
-  `INTEGRATION`. `check` reuses the race variant. Live provider acceptance uses
-  its explicit CLI instead of an additional Task command.
+## debug/v1.0.0
 
-- Development tooling: replace Python integration validators and regression
-  fixtures with Go standard-library tools; no Python runtime is required.
+Release date: 2026-10-31. Requires agentx v1.3.0.
 
-- Development tooling (all modules): replace Make entry points with Task v3.53.1 in local
-  checks, CI and contribution/release instructions. Use `task check`, `task lint`
-  and `task vulncheck`; check coverage, build tags and failure gates are preserved.
+- Add a bounded telemetry collector and an explicitly authorized read-only trace/evaluation viewer. Preserve parent relationships, events and error types while omitting prompts and evaluation payloads.
+- Compare exact case identities, reject oversized names, and require Chromium/WebKit browser acceptance before publication.
 
-- Document standalone module installation and a runnable file-store quick start.
-- Clarify filestore revision-check, snapshot and lock-file ownership boundaries
-  when multiple instances or processes access the same paths.
-- Correct sqlstore transaction guidance: store operations can execute multiple
-  statements and join a transaction only when the caller provides one.
+## document/v1.1.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Add XLSX worksheet extraction with cached raw values and bounded ZIP/text/row/column resources.
+- Add local Tesseract image OCR and pdftoppm-to-OCR PDF parsing with cancellation, page metadata, limits and private temporary cleanup.
+- Pin verified Excelize security-fix commit c5fd73bde8f6 to resolve four reachable advisories. Require real PDF/OCR acceptance before publication.
+
+## embedding/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Cache vectors per text while retaining miss batching, duplicate order, namespace isolation and independent copies. Reuse servex Cache, contrib Loader and an explicitly injected Codec.
+- Preserve owner cancellation/Close and valid model output when cache encoding fails.
+
+## filestore/v1.1.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Implement core artifact.Store using the existing atomic JSON file engine and cross-process locks; preserve scoped keys, replacement, copies and persistence across reopen.
+
+## middleware/v1.2.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Add explicit model fallback targets with optional model-name overrides, retryable error classification, cancellation and telemetry.
+- Preserve all error chains, classify the terminal target correctly and never switch after the first stream event.
+
+## provider/v1.3.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Add OpenAI independent image generation/editing/streaming and Gemini/Vertex generation/reference editing/streaming through core imagegen. Preserve authentication, usage, signatures, previews, final images and request IDs.
+- Reject unsupported typed options, malformed or incomplete results and excessive payloads; do not automatically retry image requests.
+- Add explicit providercheck image acceptance. Ordinary tests use local fixtures and make no paid requests.
+
+## retrieval/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Add read-only Qdrant and Elasticsearch BM25/cosine rag.Retriever adapters. Enforce trusted namespaces and supported filters server-side, validate returned scope and reject partial searches.
+- Preserve cosine score semantics, bounded limits and application-owned indexing. Require real Qdrant/Elasticsearch acceptance without skips.
+
+## search/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.3.0.
+
+- Implement core search.Searcher with Tavily and Serper, explicit credentials, attributed URLs/snippets, bounded responses and cancellation.
+- Refuse credential-bearing redirects and automatic paid retries; compose the core bounded Agent tool.
 
 ## provider/v1.2.0
 

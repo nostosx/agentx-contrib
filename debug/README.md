@@ -1,6 +1,6 @@
 # Development trace and evaluation viewer
 
-Unreleased, explicitly mounted HTTP viewer built on `telemetry.Tracer` and
+Explicitly mounted HTTP viewer built on `telemetry.Tracer` and
 `eval.Report`. It does not start a listener, register global routes or run
 model calls. Applications keep their existing Agent/evaluation execution path.
 

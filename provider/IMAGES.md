@@ -1,6 +1,6 @@
 # Image generation and editing
 
-## Gemini implementation (unreleased)
+## Gemini implementation
 
 `gemini.NewImageGenerator` implements the same four core imagegen interfaces,
 using the established generateContent/streamGenerateContent protocol and the
@@ -29,7 +29,7 @@ one PNG, 1K size and 1:1 aspect ratio without an unsupported quality parameter.
 Edit additionally requires the explicit media fixture. Nothing runs a paid
 request by default. See Google's [generateContent image guide](https://ai.google.dev/gemini-api/docs/generate-content/image-generation).
 
-## Artifact persistence (unreleased)
+## Artifact persistence
 
 Set imagegen.ToolOptions.Artifacts to an artifact.Store and ArtifactScope to
 trusted application identity. Implementations include filestore.Artifacts and
@@ -40,17 +40,14 @@ See [artifact integration](../artifact/README.md).
 
 ## OpenAI implementation
 
-This is an unreleased feature. Use the matching agentx and provider source
-checkouts; published agentx v1.2.1 does not contain `imagegen`. The provider's
-published dependency is deliberately unchanged until a core release exists.
-For local development, create a workspace outside these repositories:
+Image contracts require agentx v1.3.0 and image adapters require provider v1.3.0.
+Install their published versions without a source workspace:
 
 ```sh
 mkdir image-demo
 cd image-demo
 go mod init example.com/image-demo
-go work init . /absolute/path/to/agentx /absolute/path/to/agentx-contrib/provider
-go get github.com/nostosx/agentx@v1.2.1 github.com/nostosx/agentx-contrib/provider@v1.2.0
+go get github.com/nostosx/agentx@v1.3.0 github.com/nostosx/agentx-contrib/provider@v1.3.0
 ```
 
 `openai.ImageGenerator` calls the Images API directly over `net/http` and

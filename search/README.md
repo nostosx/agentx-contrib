@@ -1,6 +1,6 @@
 # External web search
 
-Unreleased adapters for `agentx/search.Searcher`. `NewTavily` uses basic web
+Adapters for `agentx/search.Searcher`. `NewTavily` uses basic web
 search; `NewSerper` returns Google organic results. Applications supply API
 keys explicitly; constructors do not read credentials from the environment.
 
@@ -13,8 +13,7 @@ if err != nil { return err }
 ```
 
 Import `search` from `github.com/nostosx/agentx-contrib/search` and `coresearch`
-from `github.com/nostosx/agentx/search`. A matching, unreleased core is required;
-use the repository's external modfile/workspace development procedure.
+from `github.com/nostosx/agentx/search`. Core v1.3.0 or later is required; install the independently versioned contrib module.
 
 `Search(ctx, Request{Query: "...", Limit: 5})` preserves titles, URLs, snippets,
 provider scores when available, and Tavily's request ID. Zero Limit selects 5.

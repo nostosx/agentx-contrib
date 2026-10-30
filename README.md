@@ -21,13 +21,18 @@ imports.
 
 | Module | Packages | Implements | Third-party dependencies |
 | --- | --- | --- | --- |
-| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`, `provider/anthropic`, `provider/gemini`, `provider/bedrock`, `provider/cohere` | `model.Model`; `memory.Embedder` (OpenAI, Gemini/Vertex, Bedrock Titan); `rag.Reranker` (Cohere) | `github.com/nostosx/kitx/dataurl`, `github.com/nostosx/kitx/utf8text` |
+| `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper core `search.Searcher`, with an Agent tool adapter | none |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant and Elasticsearch BM25/vector `rag.Retriever`, with namespace filters | none |
+| `github.com/nostosx/agentx-contrib/debug` | `debug` | bounded `telemetry.Tracer`, authenticated HTTP viewer and evaluation comparison | none |
+| `github.com/nostosx/agentx-contrib/artifact` | `artifact` | core `artifact.Store` backed by servex-contrib S3 object storage | servex-contrib/storage/s3 and its SDK types |
+| `github.com/nostosx/agentx-contrib/embedding` | `embedding` | cached `memory.Embedder` using servex Cache and contrib Loader | servex, cache/loader; tests compose memory cache and JSON codec |
+| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`, `provider/anthropic`, `provider/gemini`, `provider/bedrock`, `provider/cohere` | `model.Model`; `imagegen.Generator/Editor/Streamer/EditStreamer` (OpenAI/Gemini); `memory.Embedder` (OpenAI, Gemini/Vertex, Bedrock Titan); `rag.Reranker` (Cohere) | `github.com/nostosx/kitx/dataurl`, `github.com/nostosx/kitx/utf8text` |
 | `github.com/nostosx/agentx-contrib/otel` | `otel` | `telemetry.Tracer` and `telemetry.Meter` over OpenTelemetry | `go.opentelemetry.io/otel` with its `trace`, `metric` and `log` APIs (the SDK only in tests) |
 | `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store` and encrypted `mcp.TokenStore` on SQLite, PostgreSQL and MySQL | none in the package; its tests use `modernc.org/sqlite`, `github.com/jackc/pgx/v5` and `github.com/go-sql-driver/mysql` |
-| `github.com/nostosx/agentx-contrib/filestore` | `filestore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store`, `rag.VectorStore` and `mcp.TokenStore` in JSON files | `github.com/nostosx/kitx/atomicfile` |
-| `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`, `middleware/retry` | `loop.Middleware`, model and tool decorators and a retrying `memory.Embedder` | none |
+| `github.com/nostosx/agentx-contrib/filestore` | `filestore` | `session.Store`, `loop.Checkpointer`, `workflow.Checkpointer`, `memory.Store`, `rag.VectorStore`, `artifact.Store` and `mcp.TokenStore` in JSON files | `github.com/nostosx/kitx/atomicfile` |
+| `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`, `middleware/retry`, `middleware/fallback` | `loop.Middleware`, model and tool decorators and a retrying `memory.Embedder` | none |
 | `github.com/nostosx/agentx-contrib/pgvector` | `pgvector` | PostgreSQL `rag.VectorStore`, `memory.Store` and database-side `memory.Retriever`, with namespace isolation | library uses `database/sql`; integration tests use pgx |
-| `github.com/nostosx/agentx-contrib/document` | `document` | PDF and DOCX `rag.Parser` implementations with source metadata | PDF requires an application-installed `pdftotext`; DOCX uses the standard library |
+| `github.com/nostosx/agentx-contrib/document` | `document` | PDF, DOCX, XLSX and image OCR `rag.Parser` implementations | Excelize; application-installed Poppler/Tesseract executables |
 | `github.com/nostosx/agentx-contrib/s3` | `s3` | Paginated S3 document `rag.Loader` using application-provided parsers | AWS SDK for Go v2 S3 |
 
 The table lists each module's direct external dependencies, omitting the
@@ -36,25 +41,26 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-The 2026-10-28 releases are provider v1.2.0, sqlstore v1.1.0 and the initial
-v1.0.0 releases of document, pgvector and s3. They require agentx v1.2.1.
-Middleware and otel remain at v1.1.0; filestore remains at v1.0.0. All resolve
-published dependencies without replacements. Install only the modules your
-application needs; the repository root is not a module.
-
-Run these commands inside your application's Go module. For a new application,
-create a directory and run `go mod init example.com/agentx-app` there first.
-The repository root is not an installable module.
+The 2026-10-31 releases use agentx v1.3.0: provider v1.3.0, middleware v1.2.0,
+filestore/document v1.1.0, and artifact/debug/embedding/retrieval/search v1.0.0.
+Existing otel, sqlstore, pgvector and s3 retain their independent published versions.
+All resolve public dependencies without replacements. Install only the modules
+your application needs; the repository root is not a Go module.
 
 ```sh
-go get github.com/nostosx/agentx@v1.2.1 github.com/nostosx/agentx-contrib/provider@v1.2.0
-go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # file stores
+go get github.com/nostosx/agentx@v1.3.0 github.com/nostosx/agentx-contrib/provider@v1.3.0
+go get github.com/nostosx/agentx-contrib/filestore@v1.1.0     # file stores
 go get github.com/nostosx/agentx-contrib/sqlstore@v1.1.0      # SQL stores
-go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # logging and retries
+go get github.com/nostosx/agentx-contrib/middleware@v1.2.0    # logging and retries
 go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
-go get github.com/nostosx/agentx-contrib/document@v1.0.0
+go get github.com/nostosx/agentx-contrib/document@v1.1.0
 go get github.com/nostosx/agentx-contrib/pgvector@v1.0.0
 go get github.com/nostosx/agentx-contrib/s3@v1.0.0
+go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
+go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
+go get github.com/nostosx/agentx-contrib/search@v1.0.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.0.0
+go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 
 Each module is versioned on its own, with tags of the form
@@ -65,7 +71,7 @@ these nested modules.
 
 This file-store example needs no model API or database server. In a new
 application directory, run `go mod init example.com/agentx-files` and
-`go get github.com/nostosx/agentx-contrib/filestore@v1.0.0`. Save this as
+`go get github.com/nostosx/agentx-contrib/filestore@v1.1.0`. Save this as
 `main.go`, then run `go mod tidy` followed by `go run .`:
 
 ```go
@@ -244,6 +250,45 @@ agentx messages and tool results carry images, documents, audio and video
 - **Output.** Gemini image and speech models return image and audio parts,
   Chat Completions audio models audio parts with the transcript in `Text`,
   and Bedrock image blocks image parts.
+
+### Foundations and domain adapters
+
+Core owns AI contracts: artifact.Store, memory.Embedder, model.Model and
+imagegen. Contrib owns their implementations. Shared infrastructure comes
+from servex and servex-contrib: [artifact storage](artifact/README.md) uses
+its S3 Store; [cached embeddings](embedding/README.md) use its Cache contract,
+Loader and an injected codec. The application owns clients, credentials,
+backends and lifetimes. Agentx core takes no servex dependency.
+
+`filestore.Artifacts(dir)` provides the file artifact backend.
+`middleware/fallback.New` composes model targets and never switches after
+stream output. See [fallback semantics](middleware/fallback/README.md).
+These modules use published dependencies; no sibling checkout or local replacement is required.
+
+### Retrieval, search and debugging
+
+[retrieval](retrieval/README.md) queries Qdrant and Elasticsearch through core
+`rag.Retriever`; applications manage indexes, without weakening VectorStore
+atomic replacement. [search](search/README.md) implements core `search.Searcher`
+for Tavily/Serper and can be registered as an Agent tool.
+[debug](debug/README.md) reuses telemetry/eval for bounded traces, evaluation
+summaries and baseline comparison, with mandatory application authorization.
+Compose existing servex session/auth and profile facilities at application level.
+These additions are available in the 2026-10-31 module releases listed below.
+
+### Image generation
+
+`openai.NewImageGenerator` and `gemini.NewImageGenerator` implement the core
+`imagegen` generation, editing and streaming interfaces. OpenAI uses the Images
+API with GPT Image 2.5 Sunburst (default) or Flare and supports reference images,
+masks and markup. Gemini uses generateContent with Nano Banana 2.1 by default,
+reference-image edits and ratio/resolution settings; unsupported typed options
+fail explicitly. Both reuse their existing authentication/HTTP infrastructure
+and return decoded image parts, request IDs and available detailed usage.
+
+`imagegen.Tool` makes the same client callable by an Agent. See
+[generation, editing, streaming, Agent and live-acceptance examples](provider/IMAGES.md).
+Use core v1.3.0 and provider v1.3.0 or later for image generation.
 
 ### Embedders
 

@@ -1,4 +1,4 @@
-# Artifact storage (unreleased)
+# Artifact storage
 
 `artifact.S3` implements the core `agentx/artifact.Store` using an existing
 `servex-contrib/storage/s3.Store`. It creates no SDK client, credential chain,
@@ -15,7 +15,7 @@ store, err := artifactstorage.NewS3(objectStore, artifactstorage.S3Options{
 })
 if err != nil { return err }
 value := &artifact.Artifact{
-    Scope: "tenant-42/user-7", ID: "image-123", Name: "generated.png",
+    Key: artifact.Key{Scope: "tenant-42/user-7", ID: "image-123"}, Name: "generated.png",
     MediaType: "image/png", Data: generatedPNG,
     Metadata: map[string]string{"model": "gpt-image-2.5-flare"},
 }
@@ -64,29 +64,15 @@ retains the generated Response, already-saved keys and the storage error. Do
 not regenerate merely to retry persistence. Several artifact writes are not
 a transaction; successful earlier writes remain available.
 
-## Development and release
+## Installation and validation
 
-The module requires the matching unreleased core artifact contract and
-unreleased servex S3 adapter. The zero pseudo-version in go.mod is an explicit
-development placeholder, not a published release. Use an external Go workspace
-or temporary modfile resolving those sources. No local replacements belong in
-repository manifests. Release core and the servex S3 foundation first, update
-requirements/checksums, then verify independent public consumers.
-
-For a workspace outside these repositories, include the three source modules
-and replace the exact unpublished foundation version in that workspace:
+Requires published agentx v1.3.0 and servex-contrib/storage/s3 v1.0.0.
 
 ```sh
-go work init /absolute/path/to/agentx /absolute/path/to/agentx-contrib/artifact /absolute/path/to/servex-contrib/storage/s3
-go work edit -replace=github.com/nostosx/servex-contrib/storage/s3@v0.0.0-00010101000000-000000000000=/absolute/path/to/servex-contrib/storage/s3
+go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
 ```
 
-Task forces GOWORK=off; for Task gates use external temporary module files
-instead. None of these development overrides establishes public availability.
-
-`task check MODULES=artifact`, `task lint MODULES=artifact` and
-`task vulncheck MODULES=artifact` use the repository's standard gates, with
-external development overrides while peers are unpublished. Tests exercise
-the real AWS SDK and servex adapter against a local HTTP fixture and run the
-core artifact conformance suite, including scoped identity and concurrent
-replacement. They do not prove live AWS or arbitrary S3-service compatibility.
+Applications configure the servex S3 Store and SDK client explicitly. Module
+tests exercise the SDK over local HTTP fixtures and run core artifact
+conformance, including concurrent replacement and copy/namespace isolation.
+Release acceptance uses public dependencies, GOWORK=off and no replacements.

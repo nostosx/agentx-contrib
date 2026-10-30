@@ -1,6 +1,6 @@
 # Server-side retrieval
 
-Unreleased Qdrant and Elasticsearch implementations of `rag.Retriever`.
+Qdrant and Elasticsearch implementations of `rag.Retriever`.
 These are read-only query adapters: applications own schema, ingestion,
 collection/index lifecycle and vector-space compatibility. They do not
 implement `rag.VectorStore`, whose atomic source replacement requires a

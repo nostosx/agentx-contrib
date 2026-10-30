@@ -3,7 +3,7 @@ module github.com/nostosx/agentx-contrib/document
 go 1.27.3
 
 require (
-	github.com/nostosx/agentx v1.2.1
+	github.com/nostosx/agentx v1.3.0
 	github.com/xuri/excelize/v2 v2.11.1-0.20261029001137-c5fd73bde8f6
 )
 

@@ -37,18 +37,40 @@ can compose the core and multiple contrib modules. A new library module:
 - is added to the module list of the CI and Release workflows and to both
   READMEs.
 
+Foundation adapters may explicitly depend on servex contracts and shared
+servex-contrib implementations. Keep that graph directed: artifact/S3 reuses
+`servex-contrib/storage/s3`; embedding cache reuses `servex/storage/cache`,
+`servex-contrib/cache/loader` and an injected codec. Applications select Redis
+or memory caches, SDK credentials, logging and telemetry providers. Do not
+reimplement these facilities in agentx, import agentx-contrib from servex,
+or couple independent agentx-contrib modules to each other.
+
+Artifact/image/search contracts are published in agentx v1.3.0. Artifact storage
+uses the independently published servex S3 v1.0.0 foundation. Release consumers
+must resolve public dependencies without source replacements. External temporary
+modfiles/workspaces remain an explicit development option for future unreleased
+contracts, never publication evidence.
+
 ## Development
 
-The unreleased pgvector backend has a separate real-service gate:
+The pgvector backend has a separate real-service gate:
 `AGENTX_IT_PGVECTOR_DSN=... task test INTEGRATION=true MODULES=pgvector`. Enable the vector
 extension in a disposable database first. For the document module use
 `AGENTX_IT_PDFTOTEXT=/absolute/path/to/pdftotext task test INTEGRATION=true MODULES=document`.
-Both reject missing configuration and skipped tests. Provider acceptance is
+The complete document gate also requires `AGENTX_IT_PDFTOPPM` and
+`AGENTX_IT_TESSERACT`, with all three tools executable. Retrieval acceptance
+requires disposable endpoints `AGENTX_IT_QDRANT_URL` and
+`AGENTX_IT_ELASTICSEARCH_URL`, then `task test INTEGRATION=true MODULES=retrieval`.
+All reject missing configuration and skipped tests. Provider acceptance is
+separate from debug browser acceptance, which uses explicit `AGENTX_IT_NODE`
+and `AGENTX_IT_PLAYWRIGHT` paths and both Chromium/WebKit engines through
+`task test INTEGRATION=true MODULES=debug`. Provider live acceptance is
 explicitly opt-in: `go run ./cmd/providercheck -live -provider=... -model=...` from provider/.
 Ordinary tests and CI do not enable live provider calls.
 
-Use Go 1.27.3, Task v3.53.1 and Bash. A standalone checkout resolves
-agentx and kitx v1.0.0 through the Go module proxy. Run Go
+Use Go 1.27.3, Task v3.53.1 and Bash. Released modules resolve their published
+agentx and kitx requirements through the Go module proxy; unreleased APIs need
+matching development sources through the external procedure above. Run Go
 commands inside a module directory with `GOWORK=off`, or use the `Taskfile.yml`, which
 does so for every module. For linting, install golangci-lint v2.15.0 built
 with Go 1.27.3. Install both check tools outside the modules and put the Go

@@ -17,13 +17,18 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 | 模块 | 包 | 实现 | 第三方依赖 |
 | --- | --- | --- | --- |
-| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`、`provider/anthropic`、`provider/gemini`、`provider/bedrock`、`provider/cohere` | `model.Model`；`memory.Embedder`（OpenAI、Gemini/Vertex、Bedrock Titan）；`rag.Reranker`（Cohere） | `github.com/nostosx/kitx/dataurl`、`github.com/nostosx/kitx/utf8text` |
+| `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper 的核心 `search.Searcher`，可注册 Agent 工具 | 无额外依赖 |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant、Elasticsearch BM25/向量 `rag.Retriever`，namespace 过滤 | 无额外依赖 |
+| `github.com/nostosx/agentx-contrib/debug` | `debug` | 有界 `telemetry.Tracer`、鉴权 HTTP 查看页、评测汇总和对比 | 无额外依赖 |
+| `github.com/nostosx/agentx-contrib/artifact` | `artifact` | 复用 servex-contrib S3 对象存储实现核心 `artifact.Store` | servex-contrib/storage/s3 及其 SDK 类型 |
+| `github.com/nostosx/agentx-contrib/embedding` | `embedding` | 复用 servex Cache 与 contrib Loader 的缓存 `memory.Embedder` | servex、cache/loader；测试组合内存缓存与 JSON Codec |
+| `github.com/nostosx/agentx-contrib/provider` | `provider/openai`、`provider/anthropic`、`provider/gemini`、`provider/bedrock`、`provider/cohere` | `model.Model`；`imagegen.Generator/Editor/Streamer/EditStreamer`（OpenAI/Gemini）；`memory.Embedder`（OpenAI、Gemini/Vertex、Bedrock Titan）；`rag.Reranker`（Cohere） | `github.com/nostosx/kitx/dataurl`、`github.com/nostosx/kitx/utf8text` |
 | `github.com/nostosx/agentx-contrib/otel` | `otel` | 基于 OpenTelemetry 的 `telemetry.Tracer` 和 `telemetry.Meter` | `go.opentelemetry.io/otel` 及其 `trace`、`metric` 和 `log` API（SDK 仅用于测试） |
 | `github.com/nostosx/agentx-contrib/sqlstore` | `sqlstore` | SQLite、PostgreSQL 和 MySQL 上的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store` 和加密 `mcp.TokenStore` | 包本身无；测试使用 `modernc.org/sqlite`、`github.com/jackc/pgx/v5` 和 `github.com/go-sql-driver/mysql` |
-| `github.com/nostosx/agentx-contrib/filestore` | `filestore` | 基于 JSON 文件的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store`、`rag.VectorStore` 和 `mcp.TokenStore` | `github.com/nostosx/kitx/atomicfile` |
-| `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`、`middleware/retry` | `loop.Middleware`、模型和工具装饰器，以及带重试的 `memory.Embedder` | 无 |
+| `github.com/nostosx/agentx-contrib/filestore` | `filestore` | 基于 JSON 文件的 `session.Store`、`loop.Checkpointer`、`workflow.Checkpointer`、`memory.Store`、`rag.VectorStore`、`artifact.Store` 和 `mcp.TokenStore` | `github.com/nostosx/kitx/atomicfile` |
+| `github.com/nostosx/agentx-contrib/middleware` | `middleware/logging`、`middleware/retry`、`middleware/fallback` | `loop.Middleware`、模型和工具装饰器，以及带重试的 `memory.Embedder` | 无 |
 | `github.com/nostosx/agentx-contrib/pgvector` | `pgvector` | PostgreSQL 上的 `rag.VectorStore`、`memory.Store` 和数据库端 `memory.Retriever`，支持命名空间隔离 | 库代码仅使用 `database/sql`；集成测试使用 pgx |
-| `github.com/nostosx/agentx-contrib/document` | `document` | PDF、DOCX 的 `rag.Parser`，保留来源与页码等元数据 | PDF 需要应用安装 `pdftotext`；DOCX 使用标准库 |
+| `github.com/nostosx/agentx-contrib/document` | `document` | PDF、DOCX、XLSX 和图片 OCR 的 `rag.Parser`，保留来源、页码和工作表 | Excelize；Poppler/Tesseract 可执行程序 |
 | `github.com/nostosx/agentx-contrib/s3` | `s3` | 分页加载 S3 文档的 `rag.Loader`，复用应用配置的 Parser | AWS SDK for Go v2 S3 |
 
 上表列出各模块直接使用的外部依赖，不重复列出共同依赖的 agentx。
@@ -31,23 +36,25 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 ## 安装
 
-2026-10-28 发布 provider v1.2.0、sqlstore v1.1.0，以及 document、pgvector、s3
-的首个 v1.0.0，均需要 agentx v1.2.1。middleware、otel 保持 v1.1.0，filestore
-保持 v1.0.0。各模块独立发布，依赖均通过公开代理解析，无需本地替换。
+2026-10-31 配套发布使用 agentx v1.3.0：provider v1.3.0、middleware v1.2.0、
+filestore/document v1.1.0，以及 artifact/debug/embedding/retrieval/search v1.0.0。
+otel、sqlstore、pgvector、s3 保留各自已有发布版本。依赖通过公开代理解析，无需本地替换。
 只安装应用需要的模块；本仓库根目录不是 Go 模块。
 
-在应用的 Go 模块内执行这些命令。新建应用时，先创建目录并在其中运行
-`go mod init example.com/agentx-app`。本仓库根目录不是可安装的模块。
-
 ```sh
-go get github.com/nostosx/agentx@v1.2.1 github.com/nostosx/agentx-contrib/provider@v1.2.0
-go get github.com/nostosx/agentx-contrib/filestore@v1.0.0     # 文件存储
+go get github.com/nostosx/agentx@v1.3.0 github.com/nostosx/agentx-contrib/provider@v1.3.0
+go get github.com/nostosx/agentx-contrib/filestore@v1.1.0     # 文件存储
 go get github.com/nostosx/agentx-contrib/sqlstore@v1.1.0      # SQL 存储
-go get github.com/nostosx/agentx-contrib/middleware@v1.1.0    # 日志和重试
+go get github.com/nostosx/agentx-contrib/middleware@v1.2.0    # 日志和重试
 go get github.com/nostosx/agentx-contrib/otel@v1.1.0          # OpenTelemetry
-go get github.com/nostosx/agentx-contrib/document@v1.0.0
+go get github.com/nostosx/agentx-contrib/document@v1.1.0
 go get github.com/nostosx/agentx-contrib/pgvector@v1.0.0
 go get github.com/nostosx/agentx-contrib/s3@v1.0.0
+go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
+go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
+go get github.com/nostosx/agentx-contrib/search@v1.0.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.0.0
+go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 
 每个模块单独发布版本，标签形如 `<dir>/vX.Y.Z`，例如 `provider/v1.0.0`。
@@ -57,7 +64,7 @@ go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 
 这个文件存储示例不需要模型 API 或数据库服务。在新的应用目录里运行
 `go mod init example.com/agentx-files` 和
-`go get github.com/nostosx/agentx-contrib/filestore@v1.0.0`，把下面的程序保存为
+`go get github.com/nostosx/agentx-contrib/filestore@v1.1.0`，把下面的程序保存为
 `main.go`，再依次运行 `go mod tidy`、`go run .`：
 
 ```go
@@ -218,6 +225,39 @@ agentx 的消息和工具结果可以携带图片、文档、音频和视频（�
 - **输出。** Gemini 图片和语音模型返回图片和音频 part，Chat Completions
   音频模型返回音频 part，转写文本在 `Text` 中，Bedrock 的图片块返回图片 part。
 
+### 基础设施与领域适配
+
+核心持有 AI 契约：artifact.Store、memory.Embedder、model.Model 和 imagegen；
+具体实现在 contrib。共享设施直接复用 servex/servex-contrib：
+[产物存储](artifact/README.md) 使用已有 S3 Store，
+[Embedding 缓存](embedding/README.md) 使用 Cache 契约、Loader 和注入的 Codec。
+客户端、凭据、后端和生命周期由应用装配；agentx 核心不引入 servex 依赖。
+
+`filestore.Artifacts(dir)` 提供文件产物后端；`middleware/fallback.New`
+组合模型目标，流式输出后不会切换 provider，参见 [fallback 行为](middleware/fallback/README.md)。
+这些模块使用公开依赖，无需同级源码或本地替换。
+
+### 检索、搜索与调试
+
+[retrieval](retrieval/README.md) 提供 Qdrant 和 Elasticsearch 的服务端检索，
+复用核心 `rag.Retriever`；应用管理索引，适配器不冒充原子替换的 VectorStore。
+[search](search/README.md) 实现核心 `search.Searcher`，接入 Tavily/Serper 并可注册 Agent 工具。
+[debug](debug/README.md) 复用 telemetry/eval，提供有界 trace 查看、评测结果和基线对比；
+挂载时必须注入鉴权。现有 servex 会话/认证和 profile 由应用组合。
+这些能力和 XLSX/OCR 已包含在 2026-10-31 的对应模块发布中。
+
+### 图片生成
+
+`openai.NewImageGenerator` 和 `gemini.NewImageGenerator` 实现核心 `imagegen`
+的生成、编辑与流式接口。OpenAI 使用 Images API，默认 GPT Image 2.5 Sunburst，
+也可选择 Flare 或日期快照，支持参考图、掩码和标注。Gemini 使用 generateContent，
+默认 Nano Banana 2.1，支持参考图编辑与宽高比/分辨率设置，明确拒绝不支持的参数。
+两者复用各自已有认证与 HTTP 设施，返回图片部件、请求 ID 和可用的详细用量。
+
+使用 `imagegen.Tool` 可将同一个客户端注册为 Agent 工具。
+参见 [生成、编辑、流式、Agent 与真实 API 验收示例](provider/IMAGES.md)。
+图片生成需要 core v1.3.0 与 provider v1.3.0 或更高版本。
+
 ### Embedder
 
 `openai.NewEmbedder`（`/embeddings`，也适用于 `openai.Ollama()` 等兼容服务）和
@@ -243,7 +283,7 @@ mem := memory.New(store,
 向量存储及长期记忆检索。每个命名空间隔离记录，按来源原子替换；不会自动安装 PostgreSQL
 扩展或创建 ANN 索引。它不依赖 `sqlstore`，应用自行组合所需存储。
 
-文档导入可组合 [PDF/DOCX 解析器](document/README.md) 与 [S3 Loader](s3/README.md)。
+文档导入可组合 [PDF/DOCX/XLSX/OCR 解析器](document/README.md) 与 [S3 Loader](s3/README.md)。
 PDF 通过应用安装的 `pdftotext` 提取文字；全无文本时明确失败，只有显式配置的 OCR
 Parser 才会接管。DOCX 不伪造渲染页码。专用重排见 [Provider 模块](provider/README.md)。
 

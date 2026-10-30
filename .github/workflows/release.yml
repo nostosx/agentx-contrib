@@ -9,7 +9,7 @@ on:
         description: Module to release
         required: true
         type: choice
-        options: [document, filestore, middleware, otel, pgvector, provider, s3, sqlstore]
+        options: [artifact, debug, document, embedding, filestore, middleware, otel, pgvector, provider, retrieval, s3, search, sqlstore]
       version:
         description: Version to release, such as v1.0.0
         required: true
@@ -69,6 +69,13 @@ jobs:
           if [ -n "$(go mod edit -json | jq -r '.Replace // [] | .[].Old.Path')" ]; then
             echo "$MODULE/go.mod still replaces modules; select released dependencies as described in RELEASING.md"; exit 1
           fi
+          go mod edit -json | jq -r '.Require[] | select(.Path | startswith("github.com/nostosx/")) | .Version' |
+            while IFS= read -r dependency_version; do
+              echo "$dependency_version" | grep -Eq "$version_re" || { echo "invalid nostosx dependency version $dependency_version"; exit 1; }
+              if echo "$dependency_version" | grep -Eq -- '[.-][0-9]{14}-[0-9a-f]{12}$'; then
+                echo "release required nostosx foundations before the adapter"; exit 1
+              fi
+            done
           core=$(go list -m -f '{{.Version}}' github.com/nostosx/agentx)
           echo "$core" | grep -Eq "$version_re" || { echo "bad core version $core"; exit 1; }
           if echo "$core" | grep -Eq -- '[.-][0-9]{14}-[0-9a-f]{12}$'; then
@@ -108,10 +115,12 @@ jobs:
         with:
           go-version-file: document/go.mod
           cache-dependency-path: document/go.sum
-      - run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils tesseract-ocr
       - name: Real PDF conversion without skips
         env:
           AGENTX_IT_PDFTOTEXT: /usr/bin/pdftotext
+          AGENTX_IT_TESSERACT: /usr/bin/tesseract
+          AGENTX_IT_PDFTOPPM: /usr/bin/pdftoppm
         run: task test INTEGRATION=true MODULES=document
 
   pgvector-integration:
@@ -189,13 +198,25 @@ jobs:
           AGENTX_IT_MYSQL_DSN: root:agentx@tcp(localhost:3306)/agentx
         run: task --dir .. test INTEGRATION=true MODULES=sqlstore
 
+  retrieval-integration:
+    if: inputs.module == 'retrieval'
+    needs: verify
+    uses: ./.github/workflows/retrieval-integration.yml
+
+  debug-integration:
+    if: inputs.module == 'debug'
+    needs: verify
+    uses: ./.github/workflows/debug-integration.yml
+
   release:
-    needs: [verify, sqlstore-integration, pgvector-integration, document-integration]
+    needs: [verify, sqlstore-integration, pgvector-integration, document-integration, retrieval-integration, debug-integration]
     if: >-
       ${{ !cancelled() && needs.verify.result == 'success' &&
           (inputs.module != 'sqlstore' || needs.sqlstore-integration.result == 'success') &&
           (inputs.module != 'pgvector' || needs.pgvector-integration.result == 'success') &&
-          (inputs.module != 'document' || needs.document-integration.result == 'success') }}
+          (inputs.module != 'document' || needs.document-integration.result == 'success') &&
+          (inputs.module != 'retrieval' || needs.retrieval-integration.result == 'success') &&
+          (inputs.module != 'debug' || needs.debug-integration.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

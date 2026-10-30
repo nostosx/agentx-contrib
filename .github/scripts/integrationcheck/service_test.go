@@ -8,7 +8,7 @@ import (
 
 func TestServiceSuitesRequired(t *testing.T) {
 	t.Parallel()
-	for name, required := range map[string][]string{"pgvector": pgvectorSuites, "document": documentSuites} {
+	for name, required := range map[string][]string{"pgvector": pgvectorSuites, "document": documentSuites, "retrieval": retrievalSuites, "debug": debugSuites} {
 		t.Run(name, func(t *testing.T) {
 			var complete bytes.Buffer
 			for _, suite := range required {

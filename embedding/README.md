@@ -1,4 +1,4 @@
-# Cached embeddings (unreleased)
+# Cached embeddings
 
 `Cached` implements the existing `agentx/memory.Embedder` contract. It reuses
 `servex/storage/cache.Cache` and the lifecycle-owned
@@ -45,8 +45,7 @@ TTL <= 0 means no expiry, according to the servex Cache contract. LoadTimeout
 defaults to 30 seconds. There is no automatic model retry; compose the existing
 retry.Embedder deliberately if desired.
 
-Use matching source workspaces/temporary modfiles during this unreleased
-development stage. Public servex/cache foundations are versioned independently;
+Use published agentx v1.3.0 and the independently versioned servex/cache foundations;
 do not add local replacements to this module. Tests compose the real servex
 memory cache, JSON codec and Loader, including reuse, namespace isolation,
 batching, copy isolation, invalid vectors, cache failure and cancellation.

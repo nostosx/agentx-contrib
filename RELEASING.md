@@ -12,6 +12,18 @@ until that version is available from the Go module proxy.
 
 ## Prepare the modules
 
+Artifact requires agentx v1.3.0 and servex-contrib/storage/s3 v1.0.0.
+Verify every nostosx dependency is published before releasing an adapter;
+development placeholders and local replacements are not publishable.
+Embedding uses independently released servex/cache/codec foundations.
+Search requires agentx v1.3.0 or later. Debug and retrieval
+reuse existing core contracts. Document pins an actual public Excelize
+security-fix pseudo-version until a fixed stable tag is published; the release
+ban on development pseudo-versions applies to nostosx dependencies, not this
+verified upstream security pin.
+External workspaces and temporary modfiles are development tools, not release
+acceptance. No core or foundation repository may depend back on these adapters.
+
 1. Start from a clean checkout on `main`, with Go 1.27.3 or later. When
    upgrading the core, run `scripts/use-core-version.sh <released-version>`
    after the chosen agentx version is available from the public Go proxy. The
@@ -37,6 +49,14 @@ until that version is available from the Go module proxy.
    `task test INTEGRATION=true MODULES=sqlstore`. This gate requires both DSNs and verifies all ten
    suite/backend combinations without skips; directly running tagged Go tests
    can skip an unset backend and is not equivalent acceptance.
+   Document releases require executable `AGENTX_IT_PDFTOTEXT`,
+   `AGENTX_IT_PDFTOPPM` and `AGENTX_IT_TESSERACT` and the complete document gate.
+   Retrieval releases require both disposable `AGENTX_IT_QDRANT_URL` and
+   `AGENTX_IT_ELASTICSEARCH_URL` and its real-backend Task gate. Their workflow
+   jobs run before publication and reject skipped suites.
+   Debug releases also require the committed Chromium/WebKit browser gate,
+   with explicit Node/Playwright paths; the reusable workflow installs test
+   tools outside the library module and uses an isolated HTTP fixture.
 4. Review and merge the changes before starting **Release** from `main`.
    Do not substitute a sibling checkout for the released core during
    release acceptance.
