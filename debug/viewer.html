@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentx debug</title>
+<body>
+<h1>Agentx debug</h1>
+<p>Completed traces and evaluation outcomes.</p>
+<button id="refresh" type="button">Refresh</button>
+<p id="status" role="status"></p>
+<h2>Traces</h2>
+<table><thead><tr><th>Span</th><th>Parent</th><th>Name</th><th>Duration</th><th>Error</th></tr></thead><tbody id="traces"></tbody></table>
+<h2>Trace details</h2><pre id="detail">Select a span.</pre>
+<h2>Evaluations</h2><div id="reports"></div>
+<label>Baseline <select id="baseline"></select></label>
+<label>Candidate <select id="candidate"></select></label>
+<button id="compare" type="button">Compare</button>
+<pre id="comparison"></pre>
+<script src="./viewer.js" defer></script>
+</body>
+</html>
