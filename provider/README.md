@@ -4,6 +4,10 @@ This module contains OpenAI Responses and Chat Completions, Anthropic Messages,
 Gemini/Vertex AI and Amazon Bedrock Converse adapters. The normal tests use local
 HTTP fixtures; they do not contact a provider or prove current live API behavior.
 
+Independent image generation/editing is available through
+`openai.NewImageGenerator` and `gemini.NewImageGenerator`; see [IMAGES.md](IMAGES.md) for the unreleased
+contracts, GPT Image 2.5 examples, Agent tools and explicit live acceptance.
+
 ## Explicit live acceptance
 
 `providercheck` is a verification command, not part of ordinary tests or CI.
@@ -25,6 +29,9 @@ GOWORK=off go run ./cmd/providercheck -live -provider=openai -model=YOUR_MODEL \
   -embedding-model=text-embedding-3-small
 ```
 
+Select `openai-images` or `gemini-images` for independent image generation;
+these default to generate/stream and accept an explicit edit check with a media
+fixture. See IMAGES.md for provider-specific request settings and image evidence.
 Select `openai-chat` to exercise Chat Completions separately; other provider
 names are `anthropic`, `gemini` and `bedrock`. Optional `-base-url` overrides
 the selected adapter's API endpoint, including compatible services. Credentials

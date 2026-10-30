@@ -24,9 +24,15 @@ const maxSSELine = 16 << 20
 // specification requires, an event without data lines is not dispatched,
 // and an event that the body ends before completing is discarded.
 func ReadSSE(r io.Reader) iter.Seq2[*SSEEvent, error] {
+	return ReadSSELimit(r, maxSSELine)
+}
+
+// ReadSSELimit is ReadSSE with an explicit maximum line size in bytes.
+// Images endpoints may send larger base64 payloads than conversation events.
+func ReadSSELimit(r io.Reader, maxLine int) iter.Seq2[*SSEEvent, error] {
 	return func(yield func(*SSEEvent, error) bool) {
 		sc := bufio.NewScanner(r)
-		sc.Buffer(make([]byte, 0, 64<<10), maxSSELine)
+		sc.Buffer(make([]byte, 0, min(64<<10, maxLine)), maxLine)
 		sc.Split(scanLines)
 		var ev SSEEvent
 		var data []string

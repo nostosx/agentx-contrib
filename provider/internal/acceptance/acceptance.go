@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nostosx/agentx/imagegen"
 	"github.com/nostosx/agentx/memory"
 	"github.com/nostosx/agentx/model"
 )
@@ -33,6 +34,7 @@ type Config struct {
 type Bundle struct {
 	Model    model.Model
 	Embedder memory.Embedder
+	Images   imagegen.Generator
 }
 
 // Factory obtains credentials and constructs exactly the selected adapters.
@@ -40,11 +42,14 @@ type Factory func(Config) (Bundle, error)
 
 // Result records one check without exposing request or response content.
 type Result struct {
-	Name       string      `json:"name"`
-	Status     string      `json:"status"`
-	DurationMS int64       `json:"duration_ms,omitempty"`
-	ErrorCode  string      `json:"error_code,omitempty"`
-	Usage      model.Usage `json:"usage"`
+	Name       string          `json:"name"`
+	Status     string          `json:"status"`
+	DurationMS int64           `json:"duration_ms,omitempty"`
+	ErrorCode  string          `json:"error_code,omitempty"`
+	Usage      model.Usage     `json:"usage"`
+	ImageUsage *imagegen.Usage `json:"image_usage,omitempty"`
+	Images     []ImageEvidence `json:"images,omitempty"`
+	RequestID  string          `json:"request_id,omitempty"`
 }
 
 // Report is evidence for the requested checks on this model and date only.
@@ -58,7 +63,7 @@ type Report struct {
 	Results        []Result  `json:"results"`
 }
 
-var checkNames = []string{"generate", "stream", "tools", "structured", "embedding", "media"}
+var checkNames = []string{"generate", "stream", "tools", "structured", "embedding", "media", "edit"}
 
 // Run never calls factory unless Live is true. Every requested check must pass;
 // unrequested capabilities remain visible as not_requested in the report.
@@ -66,6 +71,9 @@ func Run(ctx context.Context, c Config, factory Factory) Report {
 	r := Report{Time: time.Now().UTC(), Provider: c.Provider, Model: c.Model, EmbeddingModel: c.EmbeddingModel, Status: "unverified"}
 	if len(c.Checks) == 0 {
 		c.Checks = checkNames[:4]
+		if imageProvider(c.Provider) {
+			c.Checks = []string{"generate", "stream"}
+		}
 	}
 	for _, name := range checkNames {
 		status := "not_requested"
@@ -95,7 +103,11 @@ func Run(ctx context.Context, c Config, factory Factory) Report {
 		}
 		start := time.Now()
 		checkCtx, cancel := context.WithTimeout(ctx, c.Timeout)
-		result.Usage, err = check(checkCtx, c, b, result.Name)
+		if imageProvider(c.Provider) {
+			err = checkImages(checkCtx, c, b.Images, result)
+		} else {
+			result.Usage, err = check(checkCtx, c, b, result.Name)
+		}
 		cancel()
 		result.DurationMS = time.Since(start).Milliseconds()
 		result.Status = "passed"
@@ -108,7 +120,7 @@ func Run(ctx context.Context, c Config, factory Factory) Report {
 }
 
 func validate(c *Config) error {
-	if !slices.Contains([]string{"openai", "openai-chat", "anthropic", "gemini", "bedrock"}, c.Provider) || strings.TrimSpace(c.Model) == "" {
+	if !slices.Contains([]string{"openai", "openai-chat", "openai-images", "gemini-images", "anthropic", "gemini", "bedrock"}, c.Provider) || strings.TrimSpace(c.Model) == "" {
 		return errors.New("provider and explicit model required")
 	}
 	if c.MaxTokens == 0 {
@@ -126,12 +138,22 @@ func validate(c *Config) error {
 			return errors.New("unknown or repeated check")
 		}
 		seen[name] = true
+		if imageProvider(c.Provider) {
+			if name != "generate" && name != "stream" && name != "edit" {
+				return errors.New("unsupported images check")
+			}
+		} else if name == "edit" {
+			return errors.New("image editing requires an image provider")
+		}
 	}
 	if seen["embedding"] && (c.EmbeddingModel == "" || c.Provider == "anthropic") {
 		return errors.New("embedding requires a supported provider and explicit embedding model")
 	}
 	if seen["media"] && (c.Media == nil || !c.Media.IsMedia() || len(c.Media.Data) == 0 || len(c.Media.Data) > 5<<20) {
 		return errors.New("media requires a bounded inline fixture")
+	}
+	if seen["edit"] && (c.Media == nil || c.Media.Type != model.PartImage || len(c.Media.Data) == 0 || len(c.Media.Data) > 5<<20) {
+		return errors.New("image edit requires a bounded inline image fixture")
 	}
 	return nil
 }

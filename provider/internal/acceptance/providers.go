@@ -15,6 +15,18 @@ func Providers(c Config) (Bundle, error) {
 	var b Bundle
 	var err error
 	switch c.Provider {
+	case "gemini-images":
+		opts := []gemini.Option{gemini.WithModel(c.Model)}
+		if c.BaseURL != "" {
+			opts = append(opts, gemini.WithBaseURL(c.BaseURL))
+		}
+		b.Images, err = gemini.NewImageGenerator(opts...)
+	case "openai-images":
+		opts := []openai.Option{openai.WithModel(c.Model)}
+		if c.BaseURL != "" {
+			opts = append(opts, openai.WithBaseURL(c.BaseURL))
+		}
+		b.Images, err = openai.NewImageGenerator(opts...)
 	case "openai", "openai-chat":
 		opts := []openai.Option{openai.WithModel(c.Model)}
 		if c.BaseURL != "" {

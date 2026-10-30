@@ -10,6 +10,34 @@ import (
 	"github.com/nostosx/agentx-contrib/provider/internal/utils"
 )
 
+func TestReadSSELimit(t *testing.T) {
+	t.Parallel()
+	input := "data: " + strings.Repeat("x", 100) + "\n\n"
+	for _, tc := range []struct {
+		name  string
+		limit int
+		fail  bool
+	}{
+		{name: "within limit", limit: 128},
+		{name: "over limit", limit: 32, fail: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotErr error
+			var count int
+			for _, err := range utils.ReadSSELimit(strings.NewReader(input), tc.limit) {
+				if err != nil {
+					gotErr = err
+				} else {
+					count++
+				}
+			}
+			if (gotErr != nil) != tc.fail || !tc.fail && count != 1 || tc.fail && count != 0 {
+				t.Fatalf("events=%d error=%v", count, gotErr)
+			}
+		})
+	}
+}
+
 func TestReadSSE(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, sep string }{{name: "LF", sep: "\n"}, {name: "CRLF", sep: "\r\n"}, {name: "CR", sep: "\r"}} {

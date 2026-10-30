@@ -31,11 +31,11 @@ func run(ctx context.Context, args []string, out io.Writer) int {
 	fs := flag.NewFlagSet("providercheck", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.BoolVar(&c.Live, "live", false, "enable paid network requests using configured provider credentials")
-	fs.StringVar(&c.Provider, "provider", "", "openai, openai-chat, anthropic, gemini or bedrock")
+	fs.StringVar(&c.Provider, "provider", "", "openai, openai-chat, openai-images, gemini-images, anthropic, gemini or bedrock")
 	fs.StringVar(&c.Model, "model", "", "explicit generation model; no implicit default")
 	fs.StringVar(&c.EmbeddingModel, "embedding-model", "", "explicit embedding model when requesting embedding")
 	fs.StringVar(&c.BaseURL, "base-url", "", "optional adapter API endpoint")
-	fs.StringVar(&checks, "checks", "generate,stream,tools,structured", "comma-separated checks: generate,stream,tools,structured,embedding,media")
+	fs.StringVar(&checks, "checks", "", "comma-separated checks: generate,stream,tools,structured,embedding,media,edit; default generate,stream for image providers, otherwise generate,stream,tools,structured")
 	fs.IntVar(&c.MaxTokens, "max-tokens", 512, "output-token limit per generation request, 64 to 4096")
 	fs.DurationVar(&c.Timeout, "request-timeout", 30*time.Second, "per-check deadline, at most 5m")
 	fs.DurationVar(&timeout, "timeout", 3*time.Minute, "overall deadline, at most 30m")
@@ -52,7 +52,9 @@ func run(ctx context.Context, args []string, out io.Writer) int {
 	if fs.NArg() != 0 || timeout <= 0 || timeout > 30*time.Minute {
 		return writeReport(out, acceptance.Report{Time: time.Now().UTC(), Status: "unverified", ErrorCode: "invalid_arguments"})
 	}
-	c.Checks = strings.Split(checks, ",")
+	if checks != "" {
+		c.Checks = strings.Split(checks, ",")
+	}
 	if c.Live && mediaPath != "" {
 		media, err := readMedia(mediaPath, mediaType)
 		if err != nil {
