@@ -72,7 +72,7 @@ func TestGitHubSnapshotDeltaAndFailure(t *testing.T) {
 				fmt.Fprint(w, `{"sha":"tree","truncated":true,"tree":[]}`)
 				return
 			}
-			entries := `[{"path":"docs/a.md","type":"blob","mode":"100644","sha":"abc","size":5}]`
+			entries := `[{"path":"docs/a#b.md","type":"blob","mode":"100644","sha":"abc","size":5}]`
 			if mode == 1 {
 				entries = `[]`
 			}
@@ -91,7 +91,7 @@ func TestGitHubSnapshotDeltaAndFailure(t *testing.T) {
 	}
 	defer c.Close()
 	initial, err := c.LoadChanges(t.Context(), "")
-	if err != nil || len(initial.Documents) != 1 || initial.Documents[0].Source != "github://org/.github/docs/a.md" {
+	if err != nil || len(initial.Documents) != 1 || initial.Documents[0].Source != "github://org/.github/docs/a#b.md" || initial.Documents[0].Metadata["url"] != "https://github.com/org/.github/blob/feature%2Fdocs/docs/a%23b.md" {
 		t.Fatalf("baseline: %+v %v", initial, err)
 	}
 	unchanged, err := c.LoadChanges(t.Context(), initial.Cursor)

@@ -118,7 +118,11 @@ func NewGitHub(o GitHubOptions) (*Connector, error) {
 				content.WriteString(d.Content)
 				content.WriteString("\n\n")
 			}
-			doc := document(source, entry.Path, content.String(), "https://github.com/"+o.Owner+"/"+o.Repo+"/blob/"+url.PathEscape(o.Ref)+"/"+entry.Path)
+			segments := strings.Split(entry.Path, "/")
+			for i, segment := range segments {
+				segments[i] = url.PathEscape(segment)
+			}
+			doc := document(source, entry.Path, content.String(), "https://github.com/"+o.Owner+"/"+o.Repo+"/blob/"+url.PathEscape(o.Ref)+"/"+strings.Join(segments, "/"))
 			doc.Metadata["blob_sha"] = entry.SHA
 			docs = append(docs, doc)
 			if len(docs) > c.o.MaxDocuments {

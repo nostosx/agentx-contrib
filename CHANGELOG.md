@@ -12,6 +12,13 @@ matching development sources. See [RELEASING.md](RELEASING.md) for release gates
 
 ## Unreleased
 
+## loader/v1.0.2
+
+Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
+
+- Percent-encode GitHub file path segments in source links so files containing #, spaces or percent signs keep valid citations. Preserve repository/source identity and branch encoding.
+- Verify dotted repositories, slash-containing refs and special file names together in the snapshot/delta regression.
+
 ## loader/v1.0.1
 
 Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.

@@ -44,7 +44,7 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-Web/browser, cloud loaders and source writes require agentx v1.4.0: web/browser v1.0.0, loader v1.0.1 and retrieval v1.1.0. Their HTTP foundation is servex-contrib/transport/httpx v1.1.0.
+Web/browser, cloud loaders and source writes require agentx v1.4.0: web/browser v1.0.0, loader v1.0.2 and retrieval v1.1.0. Their HTTP foundation is servex-contrib/transport/httpx v1.1.0.
 
 The earlier 2026-10-31 releases use agentx v1.3.0: provider v1.3.0, middleware v1.2.0,
 filestore/document v1.1.0, and artifact/debug/embedding/retrieval/search v1.0.0.
@@ -67,7 +67,7 @@ go get github.com/nostosx/agentx-contrib/search@v1.0.0
 go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
 go get github.com/nostosx/agentx-contrib/web@v1.0.0
 go get github.com/nostosx/agentx-contrib/browser@v1.0.0
-go get github.com/nostosx/agentx-contrib/loader@v1.0.1
+go get github.com/nostosx/agentx-contrib/loader@v1.0.2
 go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 
