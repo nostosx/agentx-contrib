@@ -98,7 +98,14 @@ func (r *Retriever) Close() error {
 }
 
 func (r *Retriever) vector(ctx context.Context, text string) ([]float32, error) {
-	v, err := r.o.Embedder.Embed(ctx, []string{text})
+	return queryVector(ctx, r.o.Embedder, text)
+}
+
+func queryVector(ctx context.Context, embedder memory.Embedder, text string) ([]float32, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	v, err := embedder.Embed(ctx, []string{text})
 	if err != nil {
 		return nil, err
 	}
