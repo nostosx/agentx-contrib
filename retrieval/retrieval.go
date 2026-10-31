@@ -1,4 +1,4 @@
-// Package retrieval provides read-only Qdrant and Elasticsearch retrievers.
+// Package retrieval provides Qdrant and Elasticsearch retrieval and ingestion.
 // Applications own index creation, ingestion, permissions and vector spaces.
 package retrieval
 
@@ -14,7 +14,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
+
+	"github.com/nostosx/servex-contrib/transport/httpx"
 
 	"github.com/nostosx/agentx/memory"
 	"github.com/nostosx/agentx/rag"
@@ -43,6 +44,7 @@ type Retriever struct {
 	o        Options
 	http     *http.Client
 	provider string
+	owned    bool
 }
 
 var segment = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -74,13 +76,25 @@ func newRetriever(o Options, provider string) (*Retriever, error) {
 	if o.MaxResults < 1 || o.MaxResults > 10000 {
 		return nil, errors.New("retrieval: MaxResults must be between 1 and 10000")
 	}
-	h := &http.Client{Timeout: 30 * time.Second}
+	h, err := httpx.NewRestrictedHTTPClient(httpx.HTTPPolicy{AllowPrivateNetwork: true})
+	if err != nil {
+		return nil, err
+	}
 	if o.Client != nil {
 		*h = *o.Client
 	}
 	h.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	o.Endpoint = strings.TrimRight(o.Endpoint, "/")
-	return &Retriever{o: o, http: h, provider: provider}, nil
+	return &Retriever{o: o, http: h, provider: provider, owned: o.Client == nil}, nil
+}
+
+// Close releases idle connections of an internally constructed HTTP client.
+// An injected client's transport remains owned by its application.
+func (r *Retriever) Close() error {
+	if r.owned {
+		r.http.CloseIdleConnections()
+	}
+	return nil
 }
 
 func (r *Retriever) vector(ctx context.Context, text string) ([]float32, error) {
@@ -143,11 +157,15 @@ func (r *Retriever) post(ctx context.Context, path string, body, out any) error 
 	if err != nil {
 		return fmt.Errorf("retrieval: encode request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.o.Endpoint+path, bytes.NewReader(b))
+	return r.request(ctx, http.MethodPost, path, "application/json", b, out)
+}
+
+func (r *Retriever) request(ctx context.Context, method, path, contentType string, b []byte, out any) error {
+	req, err := http.NewRequestWithContext(ctx, method, r.o.Endpoint+path, bytes.NewReader(b))
 	if err != nil {
 		return errors.New("retrieval: create request")
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	if r.o.APIKey != "" {
 		if r.provider == "qdrant" {
 			req.Header.Set("api-key", r.o.APIKey)
@@ -163,7 +181,7 @@ func (r *Retriever) post(ctx context.Context, path string, body, out any) error 
 		return errors.New("retrieval: transport failed")
 	}
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("retrieval: %s HTTP %d", r.provider, res.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(res.Body, (16<<20)+1))
@@ -172,6 +190,9 @@ func (r *Retriever) post(ctx context.Context, path string, body, out any) error 
 	}
 	if len(data) > 16<<20 {
 		return errors.New("retrieval: response exceeds 16 MiB")
+	}
+	if out == nil {
+		return nil
 	}
 	if err := json.Unmarshal(data, out); err != nil {
 		return errors.New("retrieval: invalid response JSON")
@@ -198,7 +219,7 @@ func (r *Retriever) qdrant(ctx context.Context, q rag.Query) ([]rag.Hit, error) 
 		}
 		must = append(must, condition)
 	}
-	body := map[string]any{"query": v, "limit": q.Limit, "with_payload": true, "filter": map[string]any{"must": must}, "score_threshold": q.MinScore}
+	body := map[string]any{"query": v, "limit": q.Limit, "with_payload": true, "filter": map[string]any{"must": must, "must_not": []any{map[string]any{"key": "agentx_record", "match": map[string]any{"value": "manifest"}}}}, "score_threshold": q.MinScore}
 	if r.o.VectorName != "" {
 		body["using"] = r.o.VectorName
 	}
@@ -240,7 +261,8 @@ func (r *Retriever) elasticsearch(ctx context.Context, q rag.Query) ([]rag.Hit, 
 	for k, v := range q.Filter.Metadata {
 		filters = append(filters, map[string]any{"term": map[string]any{"chunk.metadata." + k: v}})
 	}
-	var query any = map[string]any{"bool": map[string]any{"filter": filters, "must": map[string]any{"match": map[string]any{"chunk.content": q.Text}}}}
+	exclude := []any{map[string]any{"term": map[string]any{"agentx_record": "manifest"}}}
+	var query any = map[string]any{"bool": map[string]any{"filter": filters, "must_not": exclude, "must": map[string]any{"match": map[string]any{"chunk.content": q.Text}}}}
 	minScore := q.MinScore
 	if r.o.Embedder != nil {
 		v, err := r.vector(ctx, q.Text)
@@ -248,7 +270,7 @@ func (r *Retriever) elasticsearch(ctx context.Context, q rag.Query) ([]rag.Hit, 
 			return nil, err
 		}
 		filters = append(filters, map[string]any{"exists": map[string]any{"field": "embedding"}})
-		query = map[string]any{"script_score": map[string]any{"query": map[string]any{"bool": map[string]any{"filter": filters}}, "script": map[string]any{"source": "cosineSimilarity(params.vector, 'embedding') + 1.0", "params": map[string]any{"vector": v}}}}
+		query = map[string]any{"script_score": map[string]any{"query": map[string]any{"bool": map[string]any{"filter": filters, "must_not": exclude}}, "script": map[string]any{"source": "cosineSimilarity(params.vector, 'embedding') + 1.0", "params": map[string]any{"vector": v}}}}
 		minScore++
 	}
 	minScore = math.Max(0, minScore)

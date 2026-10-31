@@ -143,3 +143,112 @@ func TestIntegrationElasticsearch(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegrationQdrantWriter(t *testing.T) {
+	endpoint := os.Getenv("AGENTX_IT_QDRANT_URL")
+	if endpoint == "" {
+		t.Skip("set AGENTX_IT_QDRANT_URL")
+	}
+	index := "agentx_write_" + strings.ReplaceAll(uuid.New().String(), "-", "")
+	requestJSON(t, t.Context(), http.MethodPut, endpoint+"/collections/"+index, map[string]any{"vectors": map[string]any{"size": 3, "distance": "Cosine"}})
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		requestJSON(t, ctx, http.MethodDelete, endpoint+"/collections/"+index, nil)
+	})
+	options := Options{Endpoint: endpoint, Index: index, Namespace: "tenant-a", Embedder: fixedEmbedder{}}
+	writer, err := NewQdrantWriter(WriterOptions{Options: options, Dimensions: 3, BatchSize: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	retriever, err := NewQdrant(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writerLifecycle(t, writer, retriever, func() rag.SourceWriter {
+		options.Namespace = "tenant-b"
+		other, err := NewQdrantWriter(WriterOptions{Options: options, Dimensions: 3})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return other
+	})
+}
+
+func TestIntegrationElasticsearchWriter(t *testing.T) {
+	endpoint := os.Getenv("AGENTX_IT_ELASTICSEARCH_URL")
+	if endpoint == "" {
+		t.Skip("set AGENTX_IT_ELASTICSEARCH_URL")
+	}
+	index := "agentx_write_" + strings.ReplaceAll(uuid.New().String(), "-", "")
+	requestJSON(t, t.Context(), http.MethodPut, endpoint+"/"+index, map[string]any{"settings": map[string]any{"number_of_shards": 1, "number_of_replicas": 0}, "mappings": map[string]any{"properties": map[string]any{"namespace": map[string]any{"type": "keyword"}, "agentx_record": map[string]any{"type": "keyword"}, "source_key": map[string]any{"type": "keyword"}, "embedding": map[string]any{"type": "dense_vector", "dims": 3, "similarity": "cosine"}, "chunk": map[string]any{"properties": map[string]any{"source": map[string]any{"type": "keyword"}, "content": map[string]any{"type": "text"}}}}}})
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		requestJSON(t, ctx, http.MethodDelete, endpoint+"/"+index, nil)
+	})
+	options := Options{Endpoint: endpoint, Index: index, Namespace: "tenant-a", Embedder: fixedEmbedder{}}
+	writer, err := NewElasticsearchWriter(WriterOptions{Options: options, Dimensions: 3, BatchSize: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	retriever, err := NewElasticsearch(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writerLifecycle(t, writer, retriever, func() rag.SourceWriter {
+		options.Namespace = "tenant-b"
+		other, err := NewElasticsearchWriter(WriterOptions{Options: options, Dimensions: 3})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return other
+	})
+}
+
+func writerLifecycle(t *testing.T, w rag.SourceWriter, r rag.Retriever, other func() rag.SourceWriter) {
+	t.Helper()
+	ctx := t.Context()
+	ix := rag.NewIndex(rag.Config{Writer: w, Retriever: r, Embedder: fixedEmbedder{}, BatchSize: 1})
+	docs := []*rag.Document{{ID: "a", Source: "a", Content: "golang first"}, {ID: "b", Source: "b", Content: "golang second"}}
+	result, err := ix.Sync(ctx, docs)
+	if err != nil || len(result.Added) != 2 {
+		t.Fatalf("initial Sync: %+v %v", result, err)
+	}
+	result, err = ix.Add(ctx, docs...)
+	if err != nil || len(result.Unchanged) != 2 {
+		t.Fatalf("unchanged: %+v %v", result, err)
+	}
+	hits, err := r.Retrieve(ctx, rag.Query{Text: "golang", Limit: 100})
+	if err != nil || len(hits) != 2 {
+		t.Fatalf("manifest leaked into retrieval: %+v %v", hits, err)
+	}
+	docs[0].Content = "golang replacement"
+	result, err = ix.Sync(ctx, docs[:1])
+	if err != nil || len(result.Deleted) != 1 || result.Deleted[0] != "b" {
+		t.Fatalf("replace/delete: %+v %v", result, err)
+	}
+	hits, err = r.Retrieve(ctx, rag.Query{Text: "golang", Limit: 100})
+	if err != nil || len(hits) != 1 || hits[0].Chunk.Content != "golang replacement" {
+		t.Fatalf("old chunks retained: %+v %v", hits, err)
+	}
+	o := other()
+	oi := rag.NewIndex(rag.Config{Writer: o, Embedder: fixedEmbedder{}, BatchSize: 1})
+	if _, err := oi.Add(ctx, docs[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Delete(ctx, "a"); err != nil {
+		t.Fatal(err)
+	}
+	infos, err := w.Sources(ctx)
+	if err != nil || len(infos) != 0 {
+		t.Fatalf("directory not empty: %+v %v", infos, err)
+	}
+	infos, err = o.Sources(ctx)
+	if err != nil || len(infos) != 1 {
+		t.Fatalf("namespace crossed: %+v %v", infos, err)
+	}
+	if err := o.Delete(ctx, "a"); err != nil {
+		t.Fatal(err)
+	}
+}
