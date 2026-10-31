@@ -12,6 +12,13 @@ matching development sources. See [RELEASING.md](RELEASING.md) for release gates
 
 ## Unreleased
 
+## loader/v1.0.1
+
+Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
+
+- Accept valid GitHub repository names containing periods, including .github, while rejecting dot/dot-dot path segments and keeping owner validation separate.
+- Cover repository identity in authenticated snapshot/delta HTTP fixtures and verify the public organization profile repository through the released consumer.
+
 
 ## web/v1.0.0
 

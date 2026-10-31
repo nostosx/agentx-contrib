@@ -39,7 +39,7 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 ## 安装
 
-本次网页/浏览器、数据连接器与可写索引使用 agentx v1.4.0：web/browser/loader v1.0.0、retrieval v1.1.0；HTTP 基础设施复用 servex-contrib/transport/httpx v1.1.0。
+本次网页/浏览器、数据连接器与可写索引使用 agentx v1.4.0：web/browser v1.0.0、loader v1.0.1、retrieval v1.1.0；HTTP 基础设施复用 servex-contrib/transport/httpx v1.1.0。
 
 2026-10-31 早先配套发布使用 agentx v1.3.0：provider v1.3.0、middleware v1.2.0、
 filestore/document v1.1.0，以及 artifact/debug/embedding/retrieval/search v1.0.0。
@@ -61,7 +61,7 @@ go get github.com/nostosx/agentx-contrib/search@v1.0.0
 go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
 go get github.com/nostosx/agentx-contrib/web@v1.0.0
 go get github.com/nostosx/agentx-contrib/browser@v1.0.0
-go get github.com/nostosx/agentx-contrib/loader@v1.0.0
+go get github.com/nostosx/agentx-contrib/loader@v1.0.1
 go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 

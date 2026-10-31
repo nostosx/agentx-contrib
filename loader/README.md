@@ -1,6 +1,6 @@
 # Scoped cloud document connectors
 
-Install `github.com/nostosx/agentx-contrib/loader@v1.0.0`. `NewGitHub`,
+Install `github.com/nostosx/agentx-contrib/loader@v1.0.1`. `NewGitHub`,
 `NewNotion` and `NewFeishu` return a `Connector` implementing core `rag.Loader`
 and `rag.ChangeLoader`. These connectors perform read-only API calls; they do
 not create credentials, scan entire tenants, follow external links or write
@@ -66,3 +66,6 @@ full reconciliation of the index namespace. Do not log tokens or cursors.
 
 协议验收使用本地 HTTP 服务覆盖三种真实 API 结构、分页、权限失败、游标隔离与大小限制。
 这些测试不代表真实 GitHub/Notion/飞书账号权限验收；应用需用自己的授权范围验证云端访问。
+
+GitHub repository names support periods, including organization profile repositories
+such as `.github`; owner validation remains separate from repository validation.

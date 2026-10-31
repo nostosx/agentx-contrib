@@ -7,11 +7,14 @@ import (
 	"maps"
 	"net/url"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/nostosx/agentx/rag"
 )
+
+var repositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
 
 // GitHubOptions selects a repository ref and file/directory prefixes. Paths is
 // required; use ["."] explicitly for the whole repository. Symlinks/submodules
@@ -27,7 +30,7 @@ type GitHubOptions struct {
 func NewGitHub(o GitHubOptions) (*Connector, error) {
 	o.Paths = slices.Clone(o.Paths)
 	o.Parsers = maps.Clone(o.Parsers)
-	if !identityPattern.MatchString(o.Owner) || !identityPattern.MatchString(o.Repo) || o.Ref == "" || len(o.Paths) == 0 {
+	if !identityPattern.MatchString(o.Owner) || !repositoryPattern.MatchString(o.Repo) || o.Repo == "." || o.Repo == ".." || o.Ref == "" || len(o.Paths) == 0 {
 		return nil, errors.New("loader: GitHub owner, repo, ref and paths required")
 	}
 	for _, p := range o.Paths {

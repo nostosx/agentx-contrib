@@ -55,6 +55,9 @@ func (c *testCache) Delete(_ context.Context, k string) error {
 func TestGitHubSnapshotDeltaAndFailure(t *testing.T) {
 	mode := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/repos/org/.github/") {
+			t.Error("repository name was not preserved", r.URL.Path)
+		}
 		if r.Header.Get("Authorization") != "Bearer fixture" || r.Header.Get("X-GitHub-Api-Version") == "" {
 			t.Error("missing API authentication/version")
 		}
@@ -81,14 +84,14 @@ func TestGitHubSnapshotDeltaAndFailure(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	options := GitHubOptions{Endpoint: server.URL, Client: server.Client(), Token: func(context.Context) (string, error) { return "fixture", nil }, Scope: "tenant-a:parser1", Cache: &testCache{}, Codec: jsonCodec{}, Owner: "org", Repo: "repo", Ref: "feature/docs", Paths: []string{"docs"}}
+	options := GitHubOptions{Endpoint: server.URL, Client: server.Client(), Token: func(context.Context) (string, error) { return "fixture", nil }, Scope: "tenant-a:parser1", Cache: &testCache{}, Codec: jsonCodec{}, Owner: "org", Repo: ".github", Ref: "feature/docs", Paths: []string{"docs"}}
 	c, err := NewGitHub(options)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
 	initial, err := c.LoadChanges(t.Context(), "")
-	if err != nil || len(initial.Documents) != 1 || initial.Documents[0].Source != "github://org/repo/docs/a.md" {
+	if err != nil || len(initial.Documents) != 1 || initial.Documents[0].Source != "github://org/.github/docs/a.md" {
 		t.Fatalf("baseline: %+v %v", initial, err)
 	}
 	unchanged, err := c.LoadChanges(t.Context(), initial.Cursor)
@@ -224,5 +227,16 @@ func TestCredentialRedirectAndBodyBounds(t *testing.T) {
 	redirect = false
 	if _, err := c.Load(t.Context()); err == nil {
 		t.Fatal("oversized response accepted")
+	}
+}
+
+func TestGitHubRejectsRepositoryPathSegments(t *testing.T) {
+	for _, repo := range []string{".", "..", "owner/repository"} {
+		if c, err := NewGitHub(GitHubOptions{Owner: "org", Repo: repo, Ref: "main", Paths: []string{"."}}); err == nil {
+			if err := c.Close(); err != nil {
+				t.Fatal(err)
+			}
+			t.Fatal("repository path escape accepted", repo)
+		}
 	}
 }
