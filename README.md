@@ -25,7 +25,7 @@ imports.
 | `github.com/nostosx/agentx-contrib/browser` | `browser` | dynamic pages, interaction, screenshots/downloads; isolated Chromium Session | chromedp; application Chromium and core Extractor |
 | `github.com/nostosx/agentx-contrib/loader` | `loader` | scoped GitHub/Notion/Feishu snapshots and incremental cursors | Servex HTTP and Cache/Codec contracts |
 | `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper core `search.Searcher`, with an Agent tool adapter | none |
-| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant/Elasticsearch `rag.Retriever` and non-atomic `rag.SourceWriter` | Servex HTTP |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Servex vector/text and Qdrant/Elasticsearch `rag.Retriever` and non-atomic `rag.SourceWriter` | Servex HTTP |
 | `github.com/nostosx/agentx-contrib/debug` | `debug` | bounded `telemetry.Tracer`, authenticated HTTP viewer and evaluation comparison | none |
 | `github.com/nostosx/agentx-contrib/artifact` | `artifact` | core `artifact.Store` backed by servex-contrib S3 object storage | servex-contrib/storage/s3 and its SDK types |
 | `github.com/nostosx/agentx-contrib/embedding` | `embedding` | cached `memory.Embedder` using servex Cache and contrib Loader | servex, cache/loader; tests compose memory cache and JSON codec |
@@ -64,7 +64,7 @@ go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
 go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
 go get github.com/nostosx/agentx-contrib/search@v1.0.0
-go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.2.0
 go get github.com/nostosx/agentx-contrib/web@v1.0.0
 go get github.com/nostosx/agentx-contrib/browser@v1.0.0
 go get github.com/nostosx/agentx-contrib/loader@v1.0.2
@@ -550,3 +550,7 @@ and release gates.
 ## License
 
 [MIT](LICENSE)
+
+Retrieval v1.2.0 adds generic Servex vector/text adapters and chunk encoders.
+It requires Servex v1.5.0. The PostgreSQL implementations are selected by the
+application; see [retrieval](retrieval/README.md) for transaction, filter and score boundaries.

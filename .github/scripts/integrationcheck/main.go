@@ -45,7 +45,7 @@ var pgvectorSuites = []string{
 
 var documentSuites = []string{"TestIntegrationPDFConversion", "TestIntegrationOCR"}
 
-var retrievalSuites = []string{"TestIntegrationQdrant", "TestIntegrationElasticsearch", "TestIntegrationQdrantWriter", "TestIntegrationElasticsearchWriter"}
+var retrievalSuites = []string{"TestIntegrationServexPostgres", "TestIntegrationQdrant", "TestIntegrationElasticsearch", "TestIntegrationQdrantWriter", "TestIntegrationElasticsearchWriter"}
 
 var debugSuites = []string{"TestIntegrationBrowser"}
 

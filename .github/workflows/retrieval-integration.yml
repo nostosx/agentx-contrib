@@ -21,6 +21,15 @@ jobs:
           xpack.security.enabled: 'false'
           ES_JAVA_OPTS: -Xms512m -Xmx512m
         ports: ["9200:9200"]
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: agentx
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 30
     steps:
       - uses: actions/checkout@v7
       - uses: go-task/setup-task@v2
@@ -30,6 +39,8 @@ jobs:
         with:
           go-version-file: retrieval/go.mod
           cache-dependency-path: retrieval/go.sum
+      - name: Enable vector in the owned database
+        run: docker exec "${{ job.services.postgres.id }}" psql -U postgres -d agentx -v ON_ERROR_STOP=1 -c 'CREATE EXTENSION vector'
       - name: Wait for disposable backends
         shell: bash
         run: |
@@ -44,6 +55,7 @@ jobs:
           done
       - name: Real retrieval acceptance without skips
         env:
+          AGENTX_IT_SERVEX_POSTGRES_DSN: postgres://postgres@localhost:5432/agentx?sslmode=disable
           AGENTX_IT_QDRANT_URL: http://127.0.0.1:6333
           AGENTX_IT_ELASTICSEARCH_URL: http://127.0.0.1:9200
           GOWORK: 'off'

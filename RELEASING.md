@@ -125,3 +125,11 @@ Update the independent [agentx-examples](https://github.com/nostosx/agentx-examp
 project after the core, provider and filestore versions are available. Its README
 records the selected published dependencies and standalone setup.
 The contrib version-switching script only updates this repository's libraries.
+
+## Servex retrieval v1.2.0
+
+Select Servex v1.5.0 and database/postgres, vector/pgvector and search/postgres
+v1.0.0 before publishing retrieval. The PostgreSQL dependency imports are test-only;
+production adapters consume generic contracts. Release requires the same real
+PostgreSQL acceptance as ordinary CI in addition to Qdrant/Elasticsearch writers.
+The integration gate requires AGENTX_IT_SERVEX_POSTGRES_DSN and rejects skipped suites.

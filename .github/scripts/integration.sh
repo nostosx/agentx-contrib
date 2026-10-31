@@ -19,6 +19,7 @@ case "$module" in
     test -x "$AGENTX_IT_PDFTOPPM"
     pattern='^TestIntegration' ;;
   retrieval)
+    : "${AGENTX_IT_SERVEX_POSTGRES_DSN:?retrieval requires a disposable vector-enabled PostgreSQL database}"
     : "${AGENTX_IT_QDRANT_URL:?retrieval requires a disposable Qdrant endpoint}"
     : "${AGENTX_IT_ELASTICSEARCH_URL:?retrieval requires a disposable Elasticsearch endpoint}"
     pattern='^TestIntegration' ;;

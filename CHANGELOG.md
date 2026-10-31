@@ -12,6 +12,18 @@ matching development sources. See [RELEASING.md](RELEASING.md) for release gates
 
 ## Unreleased
 
+## retrieval/v1.2.0
+
+Release date: 2026-10-31. Requires Agentx v1.4.0 and Servex v1.5.0.
+
+- Add read-only Servex vector/text retrievers and explicit chunk encoders, with
+  exact source/string metadata filters, cosine score conversion and payload identity checks.
+- Validate cancellation, finite nonzero query embeddings and backend result bounds.
+- Gate release on real PostgreSQL vector/text retrieval and namespace isolation,
+  alongside the existing Qdrant/Elasticsearch read/write acceptance.
+- Preserve existing pgvector Memory/VectorStore schemas; ingestion transactions
+  and backend selection remain owned by applications.
+
 ## loader/v1.0.2
 
 Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
@@ -25,7 +37,6 @@ Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
 
 - Accept valid GitHub repository names containing periods, including .github, while rejecting dot/dot-dot path segments and keeping owner validation separate.
 - Cover repository identity in authenticated snapshot/delta HTTP fixtures and verify the public organization profile repository through the released consumer.
-
 
 ## web/v1.0.0
 

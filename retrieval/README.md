@@ -122,7 +122,7 @@ fixtures that interrupt a write after the server has partially changed state.
 可写索引采用来源目录与失败重试语义，不承诺原子替换。`Sync` 仅接收完整快照，增量使用
 `ApplyChanges`；失败后保留旧游标。多个写入实例对同一 namespace 的协调由应用负责。
 
-## Servex vector and document retrieval (unreleased)
+## Servex vector and document retrieval (v1.2.0)
 
 NewServexVector and NewServexText consume injected servex storage/vector and
 storage/search contracts; no database backend is imported. Vector mode requires
@@ -140,6 +140,12 @@ query. Vector scores are 1-distance and drop nonpositive cosine similarity.
 Text scores remain engine-specific. Use rag.Hybrid for rank fusion. ANN is
 explicitly selected via Approximate, never enabled by an index alone.
 
-These additions require the matching unreleased servex source via an external
-temporary modfile. They do not imply a new published version. Source writers
-for other retrieval backends and their tests remain independent.
+Requires published Servex v1.5.0. Production code imports only the generic
+contracts. Applications may inject servex-contrib/vector/pgvector and
+servex-contrib/search/postgres v1.0.0; real PostgreSQL acceptance covers both,
+including source/metadata filters, payload identity and namespace isolation.
+Cancellation and nonfinite/zero embeddings fail before backend I/O.
+
+This adapter is read-only and does not implement rag.SourceWriter or
+rag.VectorStore. Applications own chunk ingestion and transactions. The
+existing Qdrant/Elasticsearch writers remain independent.

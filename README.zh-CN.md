@@ -21,7 +21,7 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 | `github.com/nostosx/agentx-contrib/browser` | `browser` | 动态页面、点击、填写、截图、下载；隔离 Chromium Session | chromedp；应用提供 Chromium 和核心 Extractor |
 | `github.com/nostosx/agentx-contrib/loader` | `loader` | GitHub、Notion、飞书只读完整快照及增量游标 | Servex HTTP、Cache/Codec 契约 |
 | `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper 的核心 `search.Searcher`，可注册 Agent 工具 | 无额外依赖 |
-| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant/Elasticsearch `rag.Retriever` 与可重试 `rag.SourceWriter` | Servex HTTP |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Servex 向量/全文及 Qdrant/Elasticsearch `rag.Retriever` 与可重试 `rag.SourceWriter` | Servex HTTP |
 | `github.com/nostosx/agentx-contrib/debug` | `debug` | 有界 `telemetry.Tracer`、鉴权 HTTP 查看页、评测汇总和对比 | 无额外依赖 |
 | `github.com/nostosx/agentx-contrib/artifact` | `artifact` | 复用 servex-contrib S3 对象存储实现核心 `artifact.Store` | servex-contrib/storage/s3 及其 SDK 类型 |
 | `github.com/nostosx/agentx-contrib/embedding` | `embedding` | 复用 servex Cache 与 contrib Loader 的缓存 `memory.Embedder` | servex、cache/loader；测试组合内存缓存与 JSON Codec |
@@ -58,7 +58,7 @@ go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
 go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
 go get github.com/nostosx/agentx-contrib/search@v1.0.0
-go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.2.0
 go get github.com/nostosx/agentx-contrib/web@v1.0.0
 go get github.com/nostosx/agentx-contrib/browser@v1.0.0
 go get github.com/nostosx/agentx-contrib/loader@v1.0.2
@@ -494,3 +494,6 @@ task test INTEGRATION=true MODULES=sqlstore
 ## 许可证
 
 [MIT](LICENSE)
+
+retrieval v1.2.0 新增通用 Servex 向量与全文适配及分块编码，依赖 Servex v1.5.0。
+PostgreSQL 后端由应用选择；事务、过滤和分数边界见 [retrieval](retrieval/README.md)。
