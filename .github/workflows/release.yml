@@ -9,7 +9,7 @@ on:
         description: Module to release
         required: true
         type: choice
-        options: [artifact, debug, document, embedding, filestore, middleware, otel, pgvector, provider, retrieval, s3, search, sqlstore]
+        options: [artifact, browser, debug, document, embedding, filestore, loader, middleware, otel, pgvector, provider, retrieval, s3, search, sqlstore, web]
       version:
         description: Version to release, such as v1.0.0
         required: true
@@ -208,15 +208,21 @@ jobs:
     needs: verify
     uses: ./.github/workflows/debug-integration.yml
 
+  browser-integration:
+    if: inputs.module == 'browser'
+    needs: verify
+    uses: ./.github/workflows/browser-integration.yml
+
   release:
-    needs: [verify, sqlstore-integration, pgvector-integration, document-integration, retrieval-integration, debug-integration]
+    needs: [verify, sqlstore-integration, pgvector-integration, document-integration, retrieval-integration, debug-integration, browser-integration]
     if: >-
       ${{ !cancelled() && needs.verify.result == 'success' &&
           (inputs.module != 'sqlstore' || needs.sqlstore-integration.result == 'success') &&
           (inputs.module != 'pgvector' || needs.pgvector-integration.result == 'success') &&
           (inputs.module != 'document' || needs.document-integration.result == 'success') &&
           (inputs.module != 'retrieval' || needs.retrieval-integration.result == 'success') &&
-          (inputs.module != 'debug' || needs.debug-integration.result == 'success') }}
+          (inputs.module != 'debug' || needs.debug-integration.result == 'success') &&
+          (inputs.module != 'browser' || needs.browser-integration.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -232,7 +238,7 @@ jobs:
         run: |
           tag="$MODULE/$VERSION"
           awk -v v="$tag" '/^## /{p = ($2 == v); next} p' ../CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          gh release create "$tag" --target "$GITHUB_SHA" --title "$MODULE $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "$tag" --target "$GITHUB_SHA" --title "发布 $MODULE $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
       - uses: actions/setup-go@v7
         with:
           go-version-file: ${{ inputs.module }}/go.mod

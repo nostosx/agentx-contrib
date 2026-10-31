@@ -21,8 +21,11 @@ imports.
 
 | Module | Packages | Implements | Third-party dependencies |
 | --- | --- | --- | --- |
+| `github.com/nostosx/agentx-contrib/web` | `web` | readable HTML/Markdown, attributed links, optional cache; core Reader/Extractor | Readability, HTML-to-Markdown, Servex HTTP/Cache Loader |
+| `github.com/nostosx/agentx-contrib/browser` | `browser` | dynamic pages, interaction, screenshots/downloads; isolated Chromium Session | chromedp; application Chromium and core Extractor |
+| `github.com/nostosx/agentx-contrib/loader` | `loader` | scoped GitHub/Notion/Feishu snapshots and incremental cursors | Servex HTTP and Cache/Codec contracts |
 | `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper core `search.Searcher`, with an Agent tool adapter | none |
-| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant and Elasticsearch BM25/vector `rag.Retriever`, with namespace filters | none |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant/Elasticsearch `rag.Retriever` and non-atomic `rag.SourceWriter` | Servex HTTP |
 | `github.com/nostosx/agentx-contrib/debug` | `debug` | bounded `telemetry.Tracer`, authenticated HTTP viewer and evaluation comparison | none |
 | `github.com/nostosx/agentx-contrib/artifact` | `artifact` | core `artifact.Store` backed by servex-contrib S3 object storage | servex-contrib/storage/s3 and its SDK types |
 | `github.com/nostosx/agentx-contrib/embedding` | `embedding` | cached `memory.Embedder` using servex Cache and contrib Loader | servex, cache/loader; tests compose memory cache and JSON codec |
@@ -41,7 +44,9 @@ shared agentx dependency. Every module also depends on kitx through agentx;
 
 ## Installation
 
-The 2026-10-31 releases use agentx v1.3.0: provider v1.3.0, middleware v1.2.0,
+Web/browser, cloud loaders and source writes require agentx v1.4.0: web/browser/loader v1.0.0 and retrieval v1.1.0. Their HTTP foundation is servex-contrib/transport/httpx v1.1.0.
+
+The earlier 2026-10-31 releases use agentx v1.3.0: provider v1.3.0, middleware v1.2.0,
 filestore/document v1.1.0, and artifact/debug/embedding/retrieval/search v1.0.0.
 Existing otel, sqlstore, pgvector and s3 retain their independent published versions.
 All resolve public dependencies without replacements. Install only the modules
@@ -59,7 +64,10 @@ go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
 go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
 go get github.com/nostosx/agentx-contrib/search@v1.0.0
-go get github.com/nostosx/agentx-contrib/retrieval@v1.0.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
+go get github.com/nostosx/agentx-contrib/web@v1.0.0
+go get github.com/nostosx/agentx-contrib/browser@v1.0.0
+go get github.com/nostosx/agentx-contrib/loader@v1.0.0
 go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 

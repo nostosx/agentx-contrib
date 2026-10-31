@@ -12,6 +12,35 @@ matching development sources. See [RELEASING.md](RELEASING.md) for release gates
 
 ## Unreleased
 
+
+## web/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
+
+- Add Readability/Markdown extraction, absolute source links, bounded HTTP/charset loading and an optional borrowed Servex cache Loader, with Agent tool and RAG snapshot examples.
+
+## browser/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.4.0.
+
+- Add isolated Chromium sessions with dynamic DOM/control snapshots, fill/click, PNG screenshots and bounded temporary downloads. Deny automatic downloads and close interrupted sessions.
+- Add mandatory real-Chromium CI/release acceptance, separate from debug viewer browser tests.
+
+## loader/v1.0.0
+
+Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
+
+- Add scoped GitHub, Notion and Feishu read-only connectors using Servex HTTP and injected Cache/Codec/token facilities. Fail incomplete snapshots and pagination/permission errors; expose expiring, scoped snapshot-comparison delta cursors with explicit deletions.
+- Cover official API shapes with HTTP fixtures; no live cloud account acceptance is implied.
+
+## retrieval/v1.1.0
+
+Release date: 2026-10-31. Requires agentx v1.4.0 and httpx v1.1.0.
+
+- Add Qdrant/Elasticsearch SourceWriters for Index.Add/Sync/ApplyChanges. Persist pending manifests before replacement and commit source hashes after all batches succeed; retain non-atomic semantics and retry incomplete sources.
+- Exclude manifests from retrieval, namespace stable identities, paginate source directories, check every bulk item/deletion result and reuse Servex HTTP. Add failure/retry fixtures and mandatory real-backend write lifecycle acceptance.
+
+
 ## artifact/v1.0.0
 
 Release date: 2026-10-31. Requires agentx v1.3.0.

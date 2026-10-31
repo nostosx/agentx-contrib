@@ -45,7 +45,7 @@ var pgvectorSuites = []string{
 
 var documentSuites = []string{"TestIntegrationPDFConversion", "TestIntegrationOCR"}
 
-var retrievalSuites = []string{"TestIntegrationQdrant", "TestIntegrationElasticsearch"}
+var retrievalSuites = []string{"TestIntegrationQdrant", "TestIntegrationElasticsearch", "TestIntegrationQdrantWriter", "TestIntegrationElasticsearchWriter"}
 
 var debugSuites = []string{"TestIntegrationBrowser"}
 
@@ -95,8 +95,8 @@ func validateRequired(input io.Reader, required []string) (int, error) {
 }
 
 func run(args []string) error {
-	if len(args) != 1 && (len(args) != 2 || (args[1] != "sqlstore" && args[1] != "pgvector" && args[1] != "document" && args[1] != "retrieval" && args[1] != "debug")) {
-		return errors.New("usage: integrationcheck result-file [sqlstore|pgvector|document|retrieval|debug]")
+	if len(args) != 1 && (len(args) != 2 || (args[1] != "sqlstore" && args[1] != "pgvector" && args[1] != "document" && args[1] != "retrieval" && args[1] != "debug" && args[1] != "browser")) {
+		return errors.New("usage: integrationcheck result-file [sqlstore|pgvector|document|retrieval|debug|browser]")
 	}
 	file, err := os.Open(args[0])
 	if err != nil {
@@ -104,7 +104,9 @@ func run(args []string) error {
 	}
 	defer file.Close()
 	var count int
-	if len(args) == 2 && args[1] == "pgvector" {
+	if len(args) == 2 && args[1] == "browser" {
+		count, err = validateRequired(file, []string{"TestIntegrationChromium"})
+	} else if len(args) == 2 && args[1] == "pgvector" {
 		count, err = validateRequired(file, pgvectorSuites)
 	} else if len(args) == 2 && args[1] == "document" {
 		count, err = validateRequired(file, documentSuites)

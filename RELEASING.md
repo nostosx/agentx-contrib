@@ -107,6 +107,14 @@ After publication, verify installation from a clean temporary module with
 Verification jobs have read-only repository permissions; only publishing has
 `contents: write`. Releases for the same module are serialized.
 
+Web/browser/loader v1.0.0 and retrieval v1.1.0 require published agentx v1.4.0.
+Web, loader and retrieval also require httpx v1.1.0; publish and independently
+verify both foundations before selecting the contrib releases. Browser has a
+required real-Chromium job using AGENTX_IT_BROWSER_BINARY. Retrieval acceptance
+requires its new SourceWriter lifecycle suites on both real backends. Ordinary
+connector tests verify official API shapes and failure semantics with fixtures;
+they do not establish live cloud-account permissions.
+
 Never push release tags by hand: a version the Go module proxy has seen cannot
 be withdrawn. A failure while warming the proxy happens after publication;
 inspect the existing tag and release before taking further action.

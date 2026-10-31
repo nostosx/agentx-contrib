@@ -17,8 +17,11 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 | 模块 | 包 | 实现 | 第三方依赖 |
 | --- | --- | --- | --- |
+| `github.com/nostosx/agentx-contrib/web` | `web` | 网页正文、Markdown、来源链接与可选缓存；核心 Reader/Extractor | Readability、HTML-to-Markdown、Servex HTTP/Cache Loader |
+| `github.com/nostosx/agentx-contrib/browser` | `browser` | 动态页面、点击、填写、截图、下载；隔离 Chromium Session | chromedp；应用提供 Chromium 和核心 Extractor |
+| `github.com/nostosx/agentx-contrib/loader` | `loader` | GitHub、Notion、飞书只读完整快照及增量游标 | Servex HTTP、Cache/Codec 契约 |
 | `github.com/nostosx/agentx-contrib/search` | `search` | Tavily/Serper 的核心 `search.Searcher`，可注册 Agent 工具 | 无额外依赖 |
-| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant、Elasticsearch BM25/向量 `rag.Retriever`，namespace 过滤 | 无额外依赖 |
+| `github.com/nostosx/agentx-contrib/retrieval` | `retrieval` | Qdrant/Elasticsearch `rag.Retriever` 与可重试 `rag.SourceWriter` | Servex HTTP |
 | `github.com/nostosx/agentx-contrib/debug` | `debug` | 有界 `telemetry.Tracer`、鉴权 HTTP 查看页、评测汇总和对比 | 无额外依赖 |
 | `github.com/nostosx/agentx-contrib/artifact` | `artifact` | 复用 servex-contrib S3 对象存储实现核心 `artifact.Store` | servex-contrib/storage/s3 及其 SDK 类型 |
 | `github.com/nostosx/agentx-contrib/embedding` | `embedding` | 复用 servex Cache 与 contrib Loader 的缓存 `memory.Embedder` | servex、cache/loader；测试组合内存缓存与 JSON Codec |
@@ -36,7 +39,9 @@ agentx-contrib 存放 [agentx](https://github.com/nostosx/agentx) 中需要第�
 
 ## 安装
 
-2026-10-31 配套发布使用 agentx v1.3.0：provider v1.3.0、middleware v1.2.0、
+本次网页/浏览器、数据连接器与可写索引使用 agentx v1.4.0：web/browser/loader v1.0.0、retrieval v1.1.0；HTTP 基础设施复用 servex-contrib/transport/httpx v1.1.0。
+
+2026-10-31 早先配套发布使用 agentx v1.3.0：provider v1.3.0、middleware v1.2.0、
 filestore/document v1.1.0，以及 artifact/debug/embedding/retrieval/search v1.0.0。
 otel、sqlstore、pgvector、s3 保留各自已有发布版本。依赖通过公开代理解析，无需本地替换。
 只安装应用需要的模块；本仓库根目录不是 Go 模块。
@@ -53,7 +58,10 @@ go get github.com/nostosx/agentx-contrib/s3@v1.0.0
 go get github.com/nostosx/agentx-contrib/artifact@v1.0.0
 go get github.com/nostosx/agentx-contrib/embedding@v1.0.0
 go get github.com/nostosx/agentx-contrib/search@v1.0.0
-go get github.com/nostosx/agentx-contrib/retrieval@v1.0.0
+go get github.com/nostosx/agentx-contrib/retrieval@v1.1.0
+go get github.com/nostosx/agentx-contrib/web@v1.0.0
+go get github.com/nostosx/agentx-contrib/browser@v1.0.0
+go get github.com/nostosx/agentx-contrib/loader@v1.0.0
 go get github.com/nostosx/agentx-contrib/debug@v1.0.0
 ```
 

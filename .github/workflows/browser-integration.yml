@@ -1,0 +1,29 @@
+name: Browser integration
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: go-task/setup-task@v2
+        with:
+          version: '3.53.1'
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: browser/go.mod
+          cache-dependency-path: browser/go.sum
+      - name: Real isolated Chromium acceptance without skips
+        shell: bash
+        run: |
+          set -euo pipefail
+          AGENTX_IT_BROWSER_BINARY="$(command -v google-chrome)"
+          export AGENTX_IT_BROWSER_BINARY
+          test -x "$AGENTX_IT_BROWSER_BINARY"
+          task test INTEGRATION=true MODULES=browser

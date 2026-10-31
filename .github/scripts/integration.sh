@@ -22,13 +22,17 @@ case "$module" in
     : "${AGENTX_IT_QDRANT_URL:?retrieval requires a disposable Qdrant endpoint}"
     : "${AGENTX_IT_ELASTICSEARCH_URL:?retrieval requires a disposable Elasticsearch endpoint}"
     pattern='^TestIntegration' ;;
+  browser)
+    : "${AGENTX_IT_BROWSER_BINARY:?browser requires an explicit Chromium executable}"
+    test -x "$AGENTX_IT_BROWSER_BINARY"
+    pattern='^TestIntegrationChromium$' ;;
   debug)
     : "${AGENTX_IT_NODE:?debug requires an explicit Node executable}"
     : "${AGENTX_IT_PLAYWRIGHT:?debug requires the installed Playwright module entry}"
     test -x "$AGENTX_IT_NODE"
     test -f "$AGENTX_IT_PLAYWRIGHT"
     pattern='^TestIntegrationBrowser$' ;;
-  *) echo 'Select sqlstore, pgvector, document, retrieval or debug for integration acceptance' >&2; exit 1 ;;
+  *) echo 'Select sqlstore, pgvector, document, retrieval, debug or browser for integration acceptance' >&2; exit 1 ;;
 esac
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 result="$(mktemp)"

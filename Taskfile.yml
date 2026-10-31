@@ -156,10 +156,10 @@ tasks:
             found=0
             for module in $modules; do
               case "$module" in
-                sqlstore|pgvector|document|retrieval|debug) found=1; bash .github/scripts/integration.sh "$module" ;;
+                sqlstore|pgvector|document|retrieval|debug|browser) found=1; bash .github/scripts/integration.sh "$module" ;;
               esac
             done
-            test "$found" = 1 || { echo 'Select sqlstore, pgvector, document, retrieval or debug for integration tests'; exit 1; }
+            test "$found" = 1 || { echo 'Select sqlstore, pgvector, document, retrieval, debug or browser for integration tests'; exit 1; }
             exit 0
           fi
           set -- -shuffle=on -count=1

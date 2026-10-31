@@ -118,3 +118,20 @@ naming the module, for changes users notice.
 
 By contributing you agree that your contributions are licensed under the
 [MIT License](LICENSE).
+
+## Web, browser, connectors and source writes
+
+Web/browser/loader and retrieval source writes require agentx v1.4.0. Web, loader
+and retrieval reuse servex-contrib/transport/httpx v1.1.0. Browser receives a core
+web.Extractor from the application and never imports the independent web module.
+Connector cursor storage borrows Servex Cache/Codec. Keep unrelated development
+adapters out of a release snapshot until their public dependencies exist.
+
+Browser integration requires executable AGENTX_IT_BROWSER_BINARY and
+`task test INTEGRATION=true MODULES=browser`. It verifies actual dynamic DOM,
+interaction, PNG screenshots, download and shutdown without skipped suites.
+Retrieval integration includes query and SourceWriter lifecycle suites for both
+Qdrant and Elasticsearch. SourceWriter is non-atomic; VectorStore's atomicity
+conformance claims do not apply. Connector fixtures verify API protocols, while
+live cloud permissions remain application/account acceptance. Apply connector
+deltas through Index.ApplyChanges, never Sync an incremental listing.

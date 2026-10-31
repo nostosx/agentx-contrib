@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        module: [artifact, debug, document, embedding, filestore, middleware, otel, pgvector, provider, retrieval, s3, search, sqlstore]
+        module: [artifact, browser, debug, document, embedding, filestore, loader, middleware, otel, pgvector, provider, retrieval, s3, search, sqlstore, web]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -188,3 +188,6 @@ jobs:
 
   debug-integration:
     uses: ./.github/workflows/debug-integration.yml
+
+  browser-integration:
+    uses: ./.github/workflows/browser-integration.yml
