@@ -29,6 +29,8 @@ limits, and return bytes before deleting the temporary file. Automatic downloads
 are denied outside an explicit download operation. An interrupted download or
 timed-out/cancelled in-flight operation closes the session. A private browser
 process/profile belongs to each session and is joined/cleaned up by Close.
+Closing a failed download preserves its concrete error, including size-limit
+failures, instead of replacing the cause with the session cancellation.
 
 Register core `browser.Tool(session, maxBytes)` as an Agent tool. It is bound to
 an application-owned session and is not marked read-only or concurrent. The

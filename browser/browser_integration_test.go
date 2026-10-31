@@ -99,4 +99,22 @@ func TestIntegrationChromium(t *testing.T) {
 	if _, err := other.Do(t.Context(), core.Action{Operation: core.Read}); err == nil {
 		t.Fatal("interrupted session was left running")
 	}
+	limitedDriver, err := New(Options{Binary: binary, Extractor: fixtureExtractor{}, MaxResultBytes: 4, NoSandbox: b.o.NoSandbox})
+	if err != nil {
+		t.Fatal(err)
+	}
+	limited, err := limitedDriver.NewSession(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer limited.Close()
+	if _, err := limited.Do(t.Context(), core.Action{Operation: core.Navigate, URL: server.URL}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := limited.Do(t.Context(), core.Action{Operation: core.Download, Selector: "#download"}); err == nil || !strings.Contains(err.Error(), "download exceeds limit") {
+		t.Fatalf("download cause lost during cleanup: %v", err)
+	}
+	if _, err := limited.Do(t.Context(), core.Action{Operation: core.Read}); err == nil {
+		t.Fatal("oversized download left session running")
+	}
 }

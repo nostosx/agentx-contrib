@@ -130,17 +130,20 @@ func (s *Session) Do(ctx context.Context, a core.Action) (*core.Result, error) {
 	stop := context.AfterFunc(ctx, cancel)
 	defer stop()
 	result, err := s.perform(op, a)
+	// Capture the action cancellation before closing a failed download. Closing
+	// the owner also cancels op, but must not replace the original download error.
+	operationErr := op.Err()
 	if err != nil && a.Operation == core.Download {
 		s.cancel()
 		s.allocCancel()
 	}
-	if op.Err() != nil {
+	if operationErr != nil {
 		s.cancel()
 		s.allocCancel()
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		return nil, op.Err()
+		return nil, operationErr
 	}
 	return result, err
 }
