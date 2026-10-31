@@ -1,0 +1,16 @@
+github.com/nostosx/agentx v1.4.0 h1:sin/Y1i3UIgqAMF/3eWKpNMjq9Gy7M7RxupHRKVghDg=
+github.com/nostosx/agentx v1.4.0/go.mod h1:B4jFEqH9+1B8Dc+AeU7PIHq2dg0rqFoS0QqHZSmAly0=
+github.com/nostosx/kitx v1.0.0 h1:EMfdh57DXbW+FPZD9/e+Mrxju1qx6EyEjrotpR+nso0=
+github.com/nostosx/kitx v1.0.0/go.mod h1:zNZAYv7ZyA2UkijHptpgnsSQKMmWIHp9E0e2TGBgDZE=
+github.com/nostosx/servex v1.4.0 h1:0B8SjcbBuIxAkygTsbZKFtBZ7QJ7k4od8s3G5xWqpWc=
+github.com/nostosx/servex v1.4.0/go.mod h1:tOSGFq4M6GVGGsm7SHTNd8SGCr0Kd3YsJ+9abwAA/Cw=
+github.com/nostosx/servex-contrib/discovery/memory v1.0.0 h1:M+cokicLQUKkpxNSai/jLEvGeDaKsgB3i9e8q5C27h0=
+github.com/nostosx/servex-contrib/discovery/memory v1.0.0/go.mod h1:RlIgYz6qS8hDTF9TJx5A9KiVYMgDw2wAH0IEqP8p0YU=
+github.com/nostosx/servex-contrib/encoding/json v1.0.0 h1:da89iNLzSeERrNL7FmU60z6u/QkmPUeSPCP/AIA02vg=
+github.com/nostosx/servex-contrib/encoding/json v1.0.0/go.mod h1:cpQdP+vdLba69lDsEK7fphFoE1+m+51gUi9tTMWJBgA=
+github.com/nostosx/servex-contrib/selector v1.2.0 h1:9eu6AjWvr42OGSmrr3w3xBuCaQFv0BFoT5WojT9Qa68=
+github.com/nostosx/servex-contrib/selector v1.2.0/go.mod h1:xSGo8N90YDUbNh53s3GtrjBeVuzUj9SCrKkfLSFgEsk=
+github.com/nostosx/servex-contrib/transport/client v1.0.0 h1:jEng7zukCMrdFHT3tsVeTfxnFslbLK5p+5wusAPmmf4=
+github.com/nostosx/servex-contrib/transport/client v1.0.0/go.mod h1:5mkNmISTGGAFr+7ldmLknCjIbnDpHlP3v/1JmDRzJyE=
+github.com/nostosx/servex-contrib/transport/httpx v1.1.0 h1:2W+hxIVb1N0XXXZQ/UtS9cuS9bicIVDFCjNbZz2lJx8=
+github.com/nostosx/servex-contrib/transport/httpx v1.1.0/go.mod h1:RpO8F3fNJiuPPYB+tTUx3oznQK2fM60mavuCy8AT3EQ=
